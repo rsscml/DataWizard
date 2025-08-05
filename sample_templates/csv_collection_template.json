@@ -1,0 +1,454 @@
+{
+  "id": "ecommerce_csv_collection_v1",
+  "name": "E-commerce Data Collection (CSV)",
+  "description": "Multi-file CSV template for e-commerce analytics with orders, customers, and products",
+  "version": "1.0",
+  "domain": "ecommerce",
+  "template_type": "csv_collection",
+  "business_context": "This template represents a typical e-commerce data export consisting of multiple CSV files. It includes orders data, customer information, and product catalog. This structure is common in e-commerce platforms where data is exported as separate CSV files that need to be analyzed together to understand business performance, customer behavior, and product success.",
+  "worksheets": [
+    {
+      "name": "Orders",
+      "description": "E-commerce order transactions",
+      "is_required": true,
+      "primary_key": "order_id",
+      "file_patterns": ["orders", "transactions", "sales"],
+      "relationships": ["Customers", "Products"],
+      "columns": [
+        {
+          "name": "order_id",
+          "business_name": "Order ID",
+          "description": "Unique identifier for each order",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "customer_id",
+          "business_name": "Customer ID",
+          "description": "Reference to customer",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "product_id",
+          "business_name": "Product ID",
+          "description": "Reference to ordered product",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "order_date",
+          "business_name": "Order Date",
+          "description": "Date when order was placed",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "quantity",
+          "business_name": "Quantity Ordered",
+          "description": "Number of items ordered",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "items",
+          "valid_range": [1, 1000]
+        },
+        {
+          "name": "unit_price",
+          "business_name": "Unit Price",
+          "description": "Price per unit",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 10000]
+        },
+        {
+          "name": "total_amount",
+          "business_name": "Order Total",
+          "description": "Total order amount",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 100000]
+        },
+        {
+          "name": "shipping_cost",
+          "business_name": "Shipping Cost",
+          "description": "Cost of shipping",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0, 1000]
+        },
+        {
+          "name": "order_status",
+          "business_name": "Order Status",
+          "description": "Current status of the order",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Returned"]
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "description": "Customer demographics and profile data",
+      "is_required": true,
+      "primary_key": "customer_id",
+      "file_patterns": ["customers", "users", "profiles"],
+      "relationships": ["Orders"],
+      "columns": [
+        {
+          "name": "customer_id",
+          "business_name": "Customer ID",
+          "description": "Unique identifier for customer",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "email",
+          "business_name": "Email Address",
+          "description": "Customer's email address",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "first_name",
+          "business_name": "First Name",
+          "description": "Customer's first name",
+          "data_type": "text",
+          "business_type": "dimension"
+        },
+        {
+          "name": "last_name",
+          "business_name": "Last Name",
+          "description": "Customer's last name",
+          "data_type": "text",
+          "business_type": "dimension"
+        },
+        {
+          "name": "registration_date",
+          "business_name": "Registration Date",
+          "description": "Date when customer registered",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "country",
+          "business_name": "Country",
+          "description": "Customer's country",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "city",
+          "business_name": "City",
+          "description": "Customer's city",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "age_group",
+          "business_name": "Age Group",
+          "description": "Customer's age grouping",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["18-25", "26-35", "36-45", "46-55", "56-65", "65+"]
+        },
+        {
+          "name": "customer_segment",
+          "business_name": "Customer Segment",
+          "description": "Customer classification segment",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["New", "Regular", "VIP", "Inactive"]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "description": "Product catalog with details and pricing",
+      "is_required": true,
+      "primary_key": "product_id",
+      "file_patterns": ["products", "catalog", "items"],
+      "relationships": ["Orders"],
+      "columns": [
+        {
+          "name": "product_id",
+          "business_name": "Product ID",
+          "description": "Unique identifier for product",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "product_name",
+          "business_name": "Product Name",
+          "description": "Name of the product",
+          "data_type": "text",
+          "business_type": "dimension"
+        },
+        {
+          "name": "category",
+          "business_name": "Product Category",
+          "description": "Main product category",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "subcategory",
+          "business_name": "Product Subcategory",
+          "description": "Product subcategory",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "brand",
+          "business_name": "Brand",
+          "description": "Product brand",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "price",
+          "business_name": "Product Price",
+          "description": "Current selling price",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 10000]
+        },
+        {
+          "name": "cost",
+          "business_name": "Product Cost",
+          "description": "Cost of the product",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 5000]
+        },
+        {
+          "name": "weight",
+          "business_name": "Product Weight",
+          "description": "Weight of the product",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "kg",
+          "valid_range": [0.01, 1000]
+        },
+        {
+          "name": "launch_date",
+          "business_name": "Launch Date",
+          "description": "Date when product was launched",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "status",
+          "business_name": "Product Status",
+          "description": "Current product status",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["Active", "Discontinued", "Out of Stock", "Seasonal"]
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "description": "Product reviews and ratings",
+      "is_required": false,
+      "file_patterns": ["reviews", "ratings", "feedback"],
+      "relationships": ["Products", "Customers"],
+      "columns": [
+        {
+          "name": "review_id",
+          "business_name": "Review ID",
+          "description": "Unique identifier for review",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "product_id",
+          "business_name": "Product ID",
+          "description": "Reference to reviewed product",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "customer_id",
+          "business_name": "Customer ID",
+          "description": "Reference to customer who reviewed",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "rating",
+          "business_name": "Rating",
+          "description": "Product rating (1-5 stars)",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "stars",
+          "valid_range": [1, 5]
+        },
+        {
+          "name": "review_date",
+          "business_name": "Review Date",
+          "description": "Date when review was submitted",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "verified_purchase",
+          "business_name": "Verified Purchase",
+          "description": "Whether review is from verified purchase",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["Yes", "No"]
+        }
+      ]
+    }
+  ],
+  "worksheet_relationships": [
+    {
+      "name": "Orders to Customers",
+      "description": "Links orders to customer information",
+      "from_worksheet": "Orders",
+      "to_worksheet": "Customers",
+      "from_column": "customer_id",
+      "to_column": "customer_id",
+      "relationship_type": "many_to_one"
+    },
+    {
+      "name": "Orders to Products",
+      "description": "Links orders to product information",
+      "from_worksheet": "Orders",
+      "to_worksheet": "Products",
+      "from_column": "product_id",
+      "to_column": "product_id",
+      "relationship_type": "many_to_one"
+    },
+    {
+      "name": "Reviews to Products",
+      "description": "Links reviews to products",
+      "from_worksheet": "Reviews",
+      "to_worksheet": "Products",
+      "from_column": "product_id",
+      "to_column": "product_id",
+      "relationship_type": "many_to_one"
+    },
+    {
+      "name": "Reviews to Customers",
+      "description": "Links reviews to customers",
+      "from_worksheet": "Reviews",
+      "to_worksheet": "Customers",
+      "from_column": "customer_id",
+      "to_column": "customer_id",
+      "relationship_type": "many_to_one"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Total Revenue",
+      "description": "Total revenue from all orders",
+      "formula": "worksheet_data['Orders']['total_amount'].sum()",
+      "category": "financial",
+      "display_format": "$%.2f",
+      "worksheets_involved": ["Orders"]
+    },
+    {
+      "name": "Average Order Value",
+      "description": "Average value per order",
+      "formula": "worksheet_data['Orders']['total_amount'].mean()",
+      "category": "performance",
+      "display_format": "$%.2f",
+      "worksheets_involved": ["Orders"]
+    },
+    {
+      "name": "Customer Lifetime Value",
+      "description": "Average revenue per customer",
+      "formula": "worksheet_data['Orders'].groupby('customer_id')['total_amount'].sum().mean()",
+      "category": "performance",
+      "display_format": "$%.2f",
+      "worksheets_involved": ["Orders"]
+    },
+    {
+      "name": "Product Profit Margin",
+      "description": "Average profit margin across products",
+      "formula": "((worksheet_data['Products']['price'] - worksheet_data['Products']['cost']) / worksheet_data['Products']['price'] * 100).mean()",
+      "category": "financial",
+      "display_format": "%.1f%%",
+      "worksheets_involved": ["Products"]
+    },
+    {
+      "name": "Customer Satisfaction Score",
+      "description": "Average product rating",
+      "formula": "worksheet_data['Reviews']['rating'].mean()",
+      "category": "performance",
+      "display_format": "%.1f stars",
+      "worksheets_involved": ["Reviews"]
+    }
+  ],
+  "visualizations": [
+    {
+      "name": "Revenue Trend Over Time",
+      "description": "Daily/monthly revenue trends",
+      "chart_type": "line",
+      "x_axis": "Orders.order_date",
+      "y_axis": "Orders.total_amount",
+      "worksheets_involved": ["Orders"]
+    },
+    {
+      "name": "Top Products by Revenue",
+      "description": "Best performing products by revenue",
+      "chart_type": "bar",
+      "x_axis": "Products.product_name",
+      "y_axis": "Orders.total_amount",
+      "worksheets_involved": ["Orders", "Products"]
+    },
+    {
+      "name": "Customer Geographic Distribution",
+      "description": "Customer distribution by country",
+      "chart_type": "pie",
+      "x_axis": "Customers.country",
+      "y_axis": "count",
+      "worksheets_involved": ["Customers"]
+    },
+    {
+      "name": "Product Ratings vs Sales",
+      "description": "Correlation between ratings and sales",
+      "chart_type": "scatter",
+      "x_axis": "Reviews.rating",
+      "y_axis": "Orders.quantity",
+      "worksheets_involved": ["Reviews", "Orders"]
+    },
+    {
+      "name": "Category Performance",
+      "description": "Revenue and profit by product category",
+      "chart_type": "bar",
+      "x_axis": "Products.category",
+      "y_axis": "revenue_and_profit",
+      "group_by": "metric",
+      "worksheets_involved": ["Products", "Orders"]
+    }
+  ],
+  "common_analyses": [
+    "Analyze total revenue and growth trends over time",
+    "Identify top-performing products and categories",
+    "Evaluate customer lifetime value and segmentation",
+    "Calculate product profitability and margin analysis",
+    "Assess customer satisfaction through review ratings",
+    "Analyze geographic distribution of customers and sales",
+    "Monitor order fulfillment and shipping performance",
+    "Track seasonal trends in sales and customer behavior",
+    "Identify correlation between product ratings and sales",
+    "Analyze customer acquisition and retention patterns",
+    "Evaluate cross-selling opportunities between categories",
+    "Monitor product performance lifecycle and discontinuation decisions"
+  ],
+  "detection_rules": {
+    "required_columns": ["order_id", "customer_id", "product_id", "total_amount"],
+    "column_patterns": ["order", "customer", "product", "amount", "price", "date"],
+    "filename_patterns": ["ecommerce", "orders", "customers", "products", "reviews"],
+    "worksheet_patterns": ["order", "customer", "product", "review"]
+  },
+  "created_date": "2024-01-15T12:00:00Z",
+  "last_modified": "2024-01-15T12:00:00Z"
+}

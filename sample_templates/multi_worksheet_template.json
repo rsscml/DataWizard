@@ -1,0 +1,405 @@
+{
+  "id": "multi_sales_report_v1",
+  "name": "Comprehensive Sales Report (Multi-Worksheet)",
+  "description": "Complete sales analysis template with multiple worksheets for sales data, customer information, and product details",
+  "version": "1.0",
+  "domain": "sales",
+  "template_type": "multi_worksheet",
+  "business_context": "This template represents a comprehensive sales analysis workbook with multiple related worksheets. It includes separate sheets for sales transactions, customer master data, product catalog, and sales targets. This structure enables detailed analysis of sales performance, customer behavior, product profitability, and goal achievement across different dimensions and time periods.",
+  "worksheets": [
+    {
+      "name": "Sales_Data",
+      "description": "Main sales transactions data",
+      "is_required": true,
+      "primary_key": "transaction_id",
+      "relationships": ["Customers", "Products"],
+      "columns": [
+        {
+          "name": "transaction_id",
+          "business_name": "Transaction ID",
+          "description": "Unique identifier for each sales transaction",
+          "data_type": "text",
+          "business_type": "identifier",
+          "relationships": []
+        },
+        {
+          "name": "customer_id",
+          "business_name": "Customer ID",
+          "description": "Reference to customer in Customers worksheet",
+          "data_type": "text",
+          "business_type": "identifier",
+          "relationships": ["customer_name"]
+        },
+        {
+          "name": "product_id",
+          "business_name": "Product ID",
+          "description": "Reference to product in Products worksheet",
+          "data_type": "text",
+          "business_type": "identifier",
+          "relationships": ["product_name"]
+        },
+        {
+          "name": "sale_date",
+          "business_name": "Sale Date",
+          "description": "Date when the sale was completed",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "quantity",
+          "business_name": "Quantity Sold",
+          "description": "Number of units sold",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "units",
+          "valid_range": [1, 10000]
+        },
+        {
+          "name": "unit_price",
+          "business_name": "Unit Price",
+          "description": "Price per unit at time of sale",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 100000]
+        },
+        {
+          "name": "total_amount",
+          "business_name": "Total Sale Amount",
+          "description": "Total revenue from this transaction",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 1000000]
+        },
+        {
+          "name": "sales_rep_id",
+          "business_name": "Sales Rep ID",
+          "description": "ID of sales representative",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "region",
+          "business_name": "Sales Region",
+          "description": "Geographic region where sale occurred",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["North", "South", "East", "West", "International"]
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "description": "Customer master data and demographics",
+      "is_required": true,
+      "primary_key": "customer_id",
+      "relationships": ["Sales_Data"],
+      "columns": [
+        {
+          "name": "customer_id",
+          "business_name": "Customer ID",
+          "description": "Unique identifier for each customer",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "customer_name",
+          "business_name": "Customer Name",
+          "description": "Full name or company name of customer",
+          "data_type": "text",
+          "business_type": "dimension"
+        },
+        {
+          "name": "customer_type",
+          "business_name": "Customer Type",
+          "description": "Classification of customer",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["Individual", "Small Business", "Enterprise", "Government"]
+        },
+        {
+          "name": "industry",
+          "business_name": "Industry",
+          "description": "Customer's industry sector",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "country",
+          "business_name": "Country",
+          "description": "Customer's country",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "signup_date",
+          "business_name": "Signup Date",
+          "description": "Date when customer first signed up",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "lifetime_value",
+          "business_name": "Lifetime Value",
+          "description": "Calculated lifetime value of customer",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD"
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "description": "Product catalog and pricing information",
+      "is_required": true,
+      "primary_key": "product_id",
+      "relationships": ["Sales_Data"],
+      "columns": [
+        {
+          "name": "product_id",
+          "business_name": "Product ID",
+          "description": "Unique identifier for each product",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "product_name",
+          "business_name": "Product Name",
+          "description": "Full name of the product",
+          "data_type": "text",
+          "business_type": "dimension"
+        },
+        {
+          "name": "category",
+          "business_name": "Product Category",
+          "description": "High-level product category",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "subcategory",
+          "business_name": "Product Subcategory",
+          "description": "Detailed product subcategory",
+          "data_type": "categorical",
+          "business_type": "dimension"
+        },
+        {
+          "name": "cost_price",
+          "business_name": "Cost Price",
+          "description": "Cost to produce/acquire the product",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 50000]
+        },
+        {
+          "name": "list_price",
+          "business_name": "List Price",
+          "description": "Standard selling price",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD",
+          "valid_range": [0.01, 100000]
+        },
+        {
+          "name": "launch_date",
+          "business_name": "Product Launch Date",
+          "description": "Date when product was launched",
+          "data_type": "datetime",
+          "business_type": "timestamp"
+        },
+        {
+          "name": "status",
+          "business_name": "Product Status",
+          "description": "Current status of product",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["Active", "Discontinued", "Pending", "Seasonal"]
+        }
+      ]
+    },
+    {
+      "name": "Targets",
+      "description": "Sales targets and goals by region and time period",
+      "is_required": false,
+      "relationships": ["Sales_Data"],
+      "columns": [
+        {
+          "name": "target_id",
+          "business_name": "Target ID",
+          "description": "Unique identifier for target record",
+          "data_type": "text",
+          "business_type": "identifier"
+        },
+        {
+          "name": "region",
+          "business_name": "Target Region",
+          "description": "Region for which target is set",
+          "data_type": "categorical",
+          "business_type": "dimension",
+          "expected_values": ["North", "South", "East", "West", "International"]
+        },
+        {
+          "name": "period",
+          "business_name": "Target Period",
+          "description": "Time period for the target",
+          "data_type": "text",
+          "business_type": "dimension"
+        },
+        {
+          "name": "revenue_target",
+          "business_name": "Revenue Target",
+          "description": "Target revenue amount",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "USD"
+        },
+        {
+          "name": "units_target",
+          "business_name": "Units Target",
+          "description": "Target number of units to sell",
+          "data_type": "numeric",
+          "business_type": "metric",
+          "unit": "units"
+        }
+      ]
+    }
+  ],
+  "worksheet_relationships": [
+    {
+      "name": "Sales to Customer",
+      "description": "Links sales transactions to customer details",
+      "from_worksheet": "Sales_Data",
+      "to_worksheet": "Customers",
+      "from_column": "customer_id",
+      "to_column": "customer_id",
+      "relationship_type": "many_to_one"
+    },
+    {
+      "name": "Sales to Product",
+      "description": "Links sales transactions to product details",
+      "from_worksheet": "Sales_Data",
+      "to_worksheet": "Products",
+      "from_column": "product_id",
+      "to_column": "product_id",
+      "relationship_type": "many_to_one"
+    },
+    {
+      "name": "Sales to Targets",
+      "description": "Links sales data to regional targets",
+      "from_worksheet": "Sales_Data",
+      "to_worksheet": "Targets",
+      "from_column": "region",
+      "to_column": "region",
+      "relationship_type": "many_to_many"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Total Revenue",
+      "description": "Sum of all sales revenue across all transactions",
+      "formula": "worksheet_data['Sales_Data']['total_amount'].sum()",
+      "category": "financial",
+      "display_format": "$%.2f",
+      "worksheets_involved": ["Sales_Data"]
+    },
+    {
+      "name": "Customer Acquisition Rate",
+      "description": "Rate of new customer acquisition",
+      "formula": "len(worksheet_data['Customers']) / worksheet_data['Customers']['signup_date'].dt.year.nunique()",
+      "category": "performance",
+      "display_format": "%.1f customers/year",
+      "worksheets_involved": ["Customers"]
+    },
+    {
+      "name": "Product Profitability",
+      "description": "Profit margin by product",
+      "formula": "((worksheet_data['Products']['list_price'] - worksheet_data['Products']['cost_price']) / worksheet_data['Products']['list_price'] * 100)",
+      "category": "financial",
+      "display_format": "%.1f%%",
+      "worksheets_involved": ["Products"]
+    },
+    {
+      "name": "Target Achievement",
+      "description": "Percentage of revenue targets achieved",
+      "formula": "(worksheet_data['Sales_Data'].groupby('region')['total_amount'].sum() / worksheet_data['Targets'].groupby('region')['revenue_target'].sum() * 100)",
+      "category": "performance",
+      "display_format": "%.1f%%",
+      "worksheets_involved": ["Sales_Data", "Targets"]
+    },
+    {
+      "name": "Average Customer Value",
+      "description": "Average revenue per customer",
+      "formula": "worksheet_data['Sales_Data'].groupby('customer_id')['total_amount'].sum().mean()",
+      "category": "performance",
+      "display_format": "$%.2f",
+      "worksheets_involved": ["Sales_Data"]
+    }
+  ],
+  "visualizations": [
+    {
+      "name": "Revenue by Product Category",
+      "description": "Total revenue breakdown by product categories",
+      "chart_type": "bar",
+      "x_axis": "Products.category",
+      "y_axis": "Sales_Data.total_amount",
+      "worksheets_involved": ["Sales_Data", "Products"]
+    },
+    {
+      "name": "Customer Growth Over Time",
+      "description": "Number of customers acquired over time",
+      "chart_type": "line",
+      "x_axis": "Customers.signup_date",
+      "y_axis": "count",
+      "worksheets_involved": ["Customers"]
+    },
+    {
+      "name": "Regional Performance vs Targets",
+      "description": "Actual revenue vs targets by region",
+      "chart_type": "bar",
+      "x_axis": "region",
+      "y_axis": "revenue",
+      "group_by": "metric_type",
+      "worksheets_involved": ["Sales_Data", "Targets"]
+    },
+    {
+      "name": "Product Profitability Analysis",
+      "description": "Scatter plot of product pricing vs profitability",
+      "chart_type": "scatter",
+      "x_axis": "Products.list_price",
+      "y_axis": "profit_margin",
+      "worksheets_involved": ["Products"]
+    },
+    {
+      "name": "Customer Lifetime Value Distribution",
+      "description": "Distribution of customer lifetime values",
+      "chart_type": "histogram",
+      "x_axis": "Customers.lifetime_value",
+      "y_axis": "frequency",
+      "worksheets_involved": ["Customers"]
+    }
+  ],
+  "common_analyses": [
+    "Analyze total revenue and growth trends across all sales data",
+    "Compare customer acquisition rates by industry and region",
+    "Evaluate product performance and profitability by category",
+    "Assess regional sales performance against targets",
+    "Identify top customers by lifetime value and purchase behavior",
+    "Analyze product portfolio performance and pricing strategies",
+    "Calculate customer segmentation based on purchase patterns",
+    "Track sales representative performance across regions",
+    "Monitor product lifecycle and discontinuation decisions",
+    "Evaluate cross-selling opportunities between product categories",
+    "Analyze seasonal trends in sales and customer behavior",
+    "Compare new vs existing customer revenue contributions"
+  ],
+  "detection_rules": {
+    "required_columns": ["customer_id", "product_id", "total_amount", "sale_date"],
+    "column_patterns": ["customer", "product", "sales", "revenue", "amount", "date"],
+    "filename_patterns": ["sales", "revenue", "comprehensive", "multi", "workbook"],
+    "worksheet_patterns": ["sales", "customer", "product", "target"]
+  },
+  "created_date": "2024-01-15T10:00:00Z",
+  "last_modified": "2024-01-15T10:00:00Z"
+}

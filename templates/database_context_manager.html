@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Context Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Unilever 2 Brand Color Palette - Matching main app */
+            --primary-bg: linear-gradient(135deg, #f8faff 0%, #ffffff 50%, #f5f8ff 100%);
+            --secondary-bg: linear-gradient(135deg, #FF79C6 0%, #FF544F 100%);
+            --accent-bg: linear-gradient(135deg, #005EEF 0%, #1F36C7 100%);
+            --neutral-bg: linear-gradient(135deg, #FFC000 0%, #005EEF 100%);
+            
+            /* Data Colors */
+            --color-primary: #1F36C7;
+            --color-secondary: #005EEF;
+            --color-tertiary: #9C44C0;
+            --color-accent: #FF79C6;
+            --color-warning: #FFC000;
+            --color-danger: #FF544F;
+            --color-success: #00B190;
+            --color-info: #77DDF5;
+            
+            /* Glass Effect Colors */
+            --glass-white: rgba(255, 255, 255, 0.8);
+            --glass-dark: rgba(115, 112, 110, 0.05);
+            --glass-border: rgba(115, 112, 110, 0.2);
+            --glass-shadow: rgba(115, 112, 110, 0.1);
+            --glass-dropdown: rgba(255, 255, 255, 0.95);
+            --glass-dropdown-border: rgba(115, 112, 110, 0.3);
+            
+            /* Text Colors */
+            --text-primary: #73706E;
+            --text-secondary: #73706E;
+            --text-muted: rgba(115, 112, 110, 0.7);
+            --text-dark: #73706E;
+            --text-light: #ffffff;
+            --foreground-color: #73706E;
+            
+            /* Interactive Colors */
+            --success-color: #00B190;
+            --error-color: #FF544F;
+            --warning-color: #FFC000;
+            --info-color: #77DDF5;
+            
+            /* Spacing */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            
+            /* Borders */
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --border-radius-lg: 24px;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.08);
+            
+            /* Glass Blur */
+            --blur-strength: 12px;
+            --blur-light: 8px;
+        }
+
+        body {
+            font-family: 'Arial', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background - Matching main app */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(31, 54, 199, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 94, 239, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(156, 68, 192, 0.02) 0%, transparent 50%);
+            animation: backgroundShift 30s ease-in-out infinite;
+            z-index: -1;
+            will-change: transform;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            25% { transform: translateX(-8px) translateY(-15px); }
+            50% { transform: translateX(8px) translateY(-8px); }
+            75% { transform: translateX(-4px) translateY(12px); }
+        }
+
+        /* Glass Morphism Utility Classes */
+        .glass {
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .glass-light {
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+            border: 1px solid var(--glass-border);
+        }
+
+        /* UPDATED: Full Width Container */
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid var(--glass-border);
+            padding: var(--spacing-lg) var(--spacing-xl);
+            box-shadow: 0 2px 10px rgba(115, 112, 110, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #1F36C7, #005EEF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        .header i {
+            background: var(--accent-bg);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* UPDATED: Main Content Full Width */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-xl);
+            width: 100%;
+            max-width: none;
+        }
+
+        /* UPDATED: Config Selector with Glass Effect */
+        .config-selector {
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* UPDATED: Form Groups */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: var(--spacing-md);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius-sm);
+            font-size: 16px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-secondary);
+            box-shadow: 0 0 0 3px rgba(0, 94, 239, 0.1);
+            background: white;
+        }
+
+        /* UPDATED: Buttons with Main App Styling */
+        .btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            text-decoration: none;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary, .btn-success {
+            background: var(--accent-bg);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--color-primary);
+        }
+
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+
+        /* UPDATED: Context Form with Glass Effect */
+        .context-form {
+            display: none;
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-xl);
+            margin-top: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .context-form.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 2px solid var(--color-secondary);
+            padding-bottom: var(--spacing-sm);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .section-title i {
+            color: var(--color-secondary);
+        }
+
+        /* UPDATED: Enhanced Sections */
+        .hierarchical-section {
+            background: rgba(255, 192, 0, 0.05);
+            border-left: 4px solid var(--color-warning);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            border-radius: var(--border-radius-sm);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+        }
+
+        .temporal-section {
+            background: rgba(119, 221, 245, 0.05);
+            border-left: 4px solid var(--color-info);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            border-radius: var(--border-radius-sm);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+        }
+
+        .disambiguation-section {
+            background: rgba(255, 84, 79, 0.05);
+            border-left: 4px solid var(--error-color);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            border-radius: var(--border-radius-sm);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+        }
+
+        .table-metadata {
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius-sm);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .table-metadata h4 {
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-md);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .column-metadata {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--border-radius-sm);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            border-left: 4px solid var(--color-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .add-button {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: var(--spacing-md);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: all 0.3s ease;
+        }
+
+        .add-button:hover {
+            background: #00A085;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .remove-button {
+            background: var(--error-color);
+            color: white;
+            border: none;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            font-size: 12px;
+            float: right;
+            transition: all 0.3s ease;
+        }
+
+        .remove-button:hover {
+            background: #E53E3E;
+            transform: scale(1.1);
+        }
+
+        /* UPDATED: Alert Styles */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius-sm);
+            margin-bottom: var(--spacing-lg);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+        }
+
+        .alert-success {
+            background: rgba(0, 177, 144, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(0, 177, 144, 0.3);
+        }
+
+        .alert-error {
+            background: rgba(255, 84, 79, 0.1);
+            color: var(--error-color);
+            border: 1px solid rgba(255, 84, 79, 0.3);
+        }
+
+        .alert-info {
+            background: rgba(119, 221, 245, 0.1);
+            color: var(--info-color);
+            border: 1px solid rgba(119, 221, 245, 0.3);
+        }
+
+        .kpi-formula {
+            background: rgba(115, 112, 110, 0.05);
+            border-radius: var(--border-radius-sm);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            border: 1px solid var(--glass-border);
+        }
+
+        .existing-context {
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius-sm);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .existing-context h4 {
+            color: var(--success-color);
+            margin-bottom: var(--spacing-md);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .nav-buttons {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .nav-buttons a {
+            color: var(--color-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0 var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius-sm);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .nav-buttons a:hover {
+            background: rgba(0, 94, 239, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .help-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: var(--spacing-xs);
+            font-style: italic;
+        }
+
+        .toggle-section {
+            cursor: pointer;
+            user-select: none;
+            padding: var(--spacing-md);
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-light));
+            -webkit-backdrop-filter: blur(var(--blur-light));
+            border-radius: var(--border-radius-sm);
+            margin-bottom: var(--spacing-sm);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-section:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateX(5px);
+        }
+
+        .toggle-section h3 {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--text-primary);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .toggle-content {
+            display: none;
+            padding: var(--spacing-md) 0;
+        }
+
+        .toggle-content.active {
+            display: block;
+        }
+
+        .multi-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        /* Preview Modal */
+        #previewModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: var(--spacing-lg);
+        }
+
+        #previewModal > div {
+            background: var(--glass-white);
+            backdrop-filter: blur(var(--blur-strength));
+            -webkit-backdrop-filter: blur(var(--blur-strength));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-xl);
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+
+        #previewModal h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            font-family: 'Arial', sans-serif;
+        }
+
+        #previewContent {
+            background: rgba(40, 44, 52, 0.95);
+            color: #ABB2BF;
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius-sm);
+            white-space: pre-wrap;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .main-content {
+                padding: var(--spacing-lg);
+            }
+            
+            .multi-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: var(--spacing-md);
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: var(--spacing-md);
+            }
+            
+            .config-selector,
+            .context-form {
+                padding: var(--spacing-lg);
+            }
+            
+            .nav-buttons a {
+                display: block;
+                margin: var(--spacing-sm) 0;
+            }
+            
+            #previewModal > div {
+                max-width: 95%;
+                max-height: 90%;
+                margin: var(--spacing-sm);
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(115, 112, 110, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-secondary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary);
+        }
+
+        /* Performance optimizations */
+        .glass,
+        .glass-light,
+        .btn,
+        .toggle-section {
+            will-change: transform;
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--color-secondary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-database"></i> Database Context Manager</h1>
+            <p>Enhance your Text-to-SQL queries with comprehensive database metadata and business context</p>
+        </div>
+
+        <div class="main-content">
+            <div class="nav-buttons">
+                <a href="/"><i class="fas fa-arrow-left"></i> Back to Chat</a>
+                <a href="#" onclick="loadExistingContexts()"><i class="fas fa-list"></i> View All Contexts</a>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <!-- Database Configuration Selector -->
+            <div class="config-selector">
+                <h2 class="section-title"><i class="fas fa-server"></i> Select Database Configuration</h2>
+                
+                <div class="form-group">
+                    <label for="databaseConfig">Database Configuration:</label>
+                    <select id="databaseConfig" onchange="loadDatabaseConfig()">
+                        <option value="">-- Select a database configuration --</option>
+                    </select>
+                </div>
+
+                <div id="configInfo" class="alert alert-info" style="display: none;">
+                    <h4>Configuration Details:</h4>
+                    <div id="configDetails"></div>
+                </div>
+
+                <div id="existingContext" class="existing-context" style="display: none;">
+                    <h4><i class="fas fa-info-circle"></i> Existing Supplemental Context</h4>
+                    <div id="existingContextDetails"></div>
+                    <button type="button" class="btn btn-secondary" onclick="editExistingContext()">
+                        <i class="fas fa-edit"></i> Edit Context
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="deleteContext()">
+                        <i class="fas fa-trash"></i> Delete Context
+                    </button>
+                </div>
+            </div>
+
+            <!-- Enhanced Context Form -->
+            <div id="contextForm" class="context-form">
+                <h2 class="section-title"><i class="fas fa-cogs"></i> Database Context Configuration</h2>
+
+                <!-- Database Description -->
+                <div class="form-group">
+                    <label for="databaseDescription">Database Description:</label>
+                    <textarea id="databaseDescription" rows="4" 
+                              placeholder="Provide a general description of the database, its purpose, and business domain..."></textarea>
+                </div>
+
+                <!-- Global Instructions -->
+                <div class="form-group">
+                    <label for="globalInstructions">Global Query Instructions:</label>
+                    <textarea id="globalInstructions" rows="6" 
+                              placeholder="Enter global instructions that should apply to all queries (e.g., always use specific date formats, preferred aggregation methods, security constraints, etc.)..."></textarea>
+                </div>
+
+                <!-- NEW: Schema Architecture Section -->
+                <div class="hierarchical-section">
+                    <div class="toggle-section" onclick="toggleSection('schemaArchitecture')">
+                        <h3><i class="fas fa-sitemap"></i> Schema Architecture & Data Structure</h3>
+                        <p class="help-text">Define how your database handles hierarchical and dimensional data</p>
+                    </div>
+                    <div id="schemaArchitecture" class="toggle-content">
+                        <div class="form-group">
+                            <label for="schemaType">Schema Architecture Type:</label>
+                            <select id="schemaType" onchange="toggleSchemaSpecificSections()">
+                                <option value="">-- Select schema type --</option>
+                                <option value="normalized">Normalized RDBMS</option>
+                                <option value="star">Star Schema / Data Warehouse</option>
+                                <option value="flattened_hierarchical">Flattened Hierarchical (Denormalized with hierarchies)</option>
+                                <option value="hybrid">Hybrid Architecture</option>
+                            </select>
+                            <div class="help-text">This affects how the system handles joins, hierarchies, and aggregations</div>
+                        </div>
+
+                        <div id="flattenedHierarchicalOptions" style="display: none;">
+                            <div class="form-group">
+                                <label for="hierarchicalComplexity">Hierarchical Data Complexity:</label>
+                                <select id="hierarchicalComplexity">
+                                    <option value="simple">Simple (2-3 hierarchy levels)</option>
+                                    <option value="moderate">Moderate (4-5 hierarchy levels)</option>
+                                    <option value="complex">Complex (6+ hierarchy levels)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="hasTemporalAggregations"> 
+                                    Contains multiple temporal aggregations (MAT, YTD, QTD, etc.)
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="hasMixedActualForecast"> 
+                                    Mixes actual and forecasted data in same tables
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="hasColumnAmbiguity"> 
+                                    Same column names appear across multiple tables
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Hierarchy Definitions -->
+                <div class="hierarchical-section">
+                    <div class="toggle-section" onclick="toggleSection('hierarchyDefinitions')">
+                        <h3><i class="fas fa-tree"></i> Hierarchy Definitions</h3>
+                        <p class="help-text">Define business unit, product, or other organizational hierarchies in your data</p>
+                    </div>
+                    <div id="hierarchyDefinitions" class="toggle-content">
+                        <div class="form-group">
+                            <label>Business Unit Hierarchies:</label>
+                            <button type="button" class="add-button" onclick="addHierarchyDefinition('businessUnit')">
+                                <i class="fas fa-plus"></i> Add Business Unit Hierarchy
+                            </button>
+                            <div id="businessUnitHierarchies"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Product Hierarchies:</label>
+                            <button type="button" class="add-button" onclick="addHierarchyDefinition('product')">
+                                <i class="fas fa-plus"></i> Add Product Hierarchy
+                            </button>
+                            <div id="productHierarchies"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Other Hierarchies:</label>
+                            <button type="button" class="add-button" onclick="addHierarchyDefinition('other')">
+                                <i class="fas fa-plus"></i> Add Other Hierarchy
+                            </button>
+                            <div id="otherHierarchies"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Temporal Aggregation Rules -->
+                <div class="temporal-section">
+                    <div class="toggle-section" onclick="toggleSection('temporalAggregations')">
+                        <h3><i class="fas fa-calendar-alt"></i> Temporal Aggregation Rules</h3>
+                        <p class="help-text">Define how time-based aggregations work in your database</p>
+                    </div>
+                    <div id="temporalAggregations" class="toggle-content">
+                        <div class="form-group">
+                            <label>Temporal Aggregation Types:</label>
+                            <button type="button" class="add-button" onclick="addTemporalAggregation()">
+                                <i class="fas fa-plus"></i> Add Temporal Aggregation
+                            </button>
+                            <div id="temporalAggregationsList"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="temporalDefaultBehavior">Default Temporal Behavior:</label>
+                            <textarea id="temporalDefaultBehavior" rows="3" 
+                                      placeholder="Describe the default temporal aggregation behavior when users don't specify (e.g., 'When no time period specified, default to MAT (Moving Annual Total)')"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="actualVsForecastLogic">Actual vs Forecast Data Logic:</label>
+                            <textarea id="actualVsForecastLogic" rows="3" 
+                                      placeholder="Explain how to distinguish between actual and forecasted data (e.g., column values, date ranges, etc.)"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Disambiguation Rules -->
+                <div class="disambiguation-section">
+                    <div class="toggle-section" onclick="toggleSection('disambiguationRules')">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Disambiguation Rules</h3>
+                        <p class="help-text">Handle cases where same column names appear in multiple tables</p>
+                    </div>
+                    <div id="disambiguationRules" class="toggle-content">
+                        <div class="form-group">
+                            <label>Column Disambiguation Rules:</label>
+                            <button type="button" class="add-button" onclick="addDisambiguationRule()">
+                                <i class="fas fa-plus"></i> Add Disambiguation Rule
+                            </button>
+                            <div id="disambiguationRulesList"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Table Preference Rules:</label>
+                            <button type="button" class="add-button" onclick="addTablePreference()">
+                                <i class="fas fa-plus"></i> Add Table Preference
+                            </button>
+                            <div id="tablePreferencesList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Cross-Table Relationships -->
+                <div class="form-group">
+                    <div class="toggle-section" onclick="toggleSection('crossTableRelationships')">
+                        <h3><i class="fas fa-link"></i> Cross-Table Relationships</h3>
+                        <p class="help-text">Define how tables relate to each other beyond simple joins</p>
+                    </div>
+                    <div id="crossTableRelationships" class="toggle-content">
+                        <div class="form-group">
+                            <label>Cross-Table Relationships:</label>
+                            <button type="button" class="add-button" onclick="addCrossTableRelationship()">
+                                <i class="fas fa-plus"></i> Add Relationship
+                            </button>
+                            <div id="crossTableRelationshipsList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Business Glossary -->
+                <div class="form-group">
+                    <label>Business Glossary:</label>
+                    <button type="button" class="add-button" onclick="addGlossaryTerm()">
+                        <i class="fas fa-plus"></i> Add Term
+                    </button>
+                    <div id="businessGlossary"></div>
+                </div>
+
+                <!-- KPI Definitions -->
+                <div class="form-group">
+                    <label>KPI Definitions:</label>
+                    <button type="button" class="add-button" onclick="addKPIDefinition()">
+                        <i class="fas fa-plus"></i> Add KPI
+                    </button>
+                    <div id="kpiDefinitions"></div>
+                </div>
+
+                <!-- Table Metadata -->
+                <div class="form-group">
+                    <label>Table Metadata:</label>
+                    <button type="button" class="add-button" onclick="addTableMetadata()">
+                        <i class="fas fa-plus"></i> Add Table
+                    </button>
+                    <div id="tableMetadata"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="text-align: center; margin-top: var(--spacing-xl);">
+                    <button type="button" class="btn btn-success" onclick="saveContext()">
+                        <i class="fas fa-save"></i> Save Context
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="previewContext()">
+                        <i class="fas fa-eye"></i> Preview Context
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        <i class="fas fa-undo"></i> Reset Form
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" style="display: none;">
+        <div>
+            <h3>Context Preview</h3>
+            <pre id="previewContent"></pre>
+            <button type="button" class="btn" onclick="closePreview()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let currentConfigId = '';
+        let tableMetadataCount = 0;
+        let glossaryTermCount = 0;
+        let kpiDefinitionCount = 0;
+        let hierarchyCount = 0;
+        let temporalAggregationCount = 0;
+        let disambiguationRuleCount = 0;
+        let tablePreferenceCount = 0;
+        let crossTableRelationshipCount = 0;
+
+        // Load database configurations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDatabaseConfigurations();
+        });
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            content.classList.toggle('active');
+        }
+
+        function toggleSchemaSpecificSections() {
+            const schemaType = document.getElementById('schemaType').value;
+            const flattenedOptions = document.getElementById('flattenedHierarchicalOptions');
+            
+            if (schemaType === 'flattened_hierarchical' || schemaType === 'hybrid') {
+                flattenedOptions.style.display = 'block';
+            } else {
+                flattenedOptions.style.display = 'none';
+            }
+        }
+
+        function addHierarchyDefinition(type) {
+            const container = document.getElementById(`${type}Hierarchies`);
+            const hierarchyDiv = document.createElement('div');
+            hierarchyDiv.className = 'column-metadata';
+            hierarchyDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="form-group">
+                    <label>Hierarchy Name:</label>
+                    <input type="text" name="hierarchy_${type}_name_${hierarchyCount}" placeholder="e.g., Business Unit Hierarchy">
+                </div>
+                <div class="multi-column">
+                    <div class="form-group">
+                        <label>Code Column:</label>
+                        <input type="text" name="hierarchy_${type}_code_col_${hierarchyCount}" placeholder="e.g., BUCode">
+                    </div>
+                    <div class="form-group">
+                        <label>Name Column:</label>
+                        <input type="text" name="hierarchy_${type}_name_col_${hierarchyCount}" placeholder="e.g., BusinessUnit">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Hierarchy Levels (comma-separated):</label>
+                    <input type="text" name="hierarchy_${type}_levels_${hierarchyCount}" placeholder="e.g., Global, Regional, Country, Local">
+                    <div class="help-text">List hierarchy levels from top to bottom</div>
+                </div>
+                <div class="form-group">
+                    <label>Hierarchy Description:</label>
+                    <textarea name="hierarchy_${type}_description_${hierarchyCount}" rows="2" placeholder="Describe how this hierarchy works in your data"></textarea>
+                </div>
+            `;
+            container.appendChild(hierarchyDiv);
+            hierarchyCount++;
+        }
+
+        function addTemporalAggregation() {
+            const container = document.getElementById('temporalAggregationsList');
+            const aggregationDiv = document.createElement('div');
+            aggregationDiv.className = 'column-metadata';
+            aggregationDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="multi-column">
+                    <div class="form-group">
+                        <label>Aggregation Code:</label>
+                        <input type="text" name="temporal_agg_code_${temporalAggregationCount}" placeholder="e.g., MAT, YTD, QTD">
+                    </div>
+                    <div class="form-group">
+                        <label>Aggregation Name:</label>
+                        <input type="text" name="temporal_agg_name_${temporalAggregationCount}" placeholder="e.g., Moving Annual Total">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Column Identifier:</label>
+                    <input type="text" name="temporal_agg_column_${temporalAggregationCount}" placeholder="Column that contains this aggregation type">
+                </div>
+                <div class="form-group">
+                    <label>Description & Usage:</label>
+                    <textarea name="temporal_agg_description_${temporalAggregationCount}" rows="2" placeholder="Explain when and how this aggregation is used"></textarea>
+                </div>
+            `;
+            container.appendChild(aggregationDiv);
+            temporalAggregationCount++;
+        }
+
+        function addDisambiguationRule() {
+            const container = document.getElementById('disambiguationRulesList');
+            const ruleDiv = document.createElement('div');
+            ruleDiv.className = 'column-metadata';
+            ruleDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="form-group">
+                    <label>Column Name:</label>
+                    <input type="text" name="disambig_column_${disambiguationRuleCount}" placeholder="e.g., Turnover">
+                </div>
+                <div class="form-group">
+                    <label>Tables Containing This Column:</label>
+                    <input type="text" name="disambig_tables_${disambiguationRuleCount}" placeholder="e.g., pnl_kpis, brand_level_kpis">
+                    <div class="help-text">Comma-separated list of table names</div>
+                </div>
+                <div class="form-group">
+                    <label>Disambiguation Logic:</label>
+                    <textarea name="disambig_logic_${disambiguationRuleCount}" rows="3" placeholder="Explain how to choose the right table when this column is requested"></textarea>
+                </div>
+            `;
+            container.appendChild(ruleDiv);
+            disambiguationRuleCount++;
+        }
+
+        function addTablePreference() {
+            const container = document.getElementById('tablePreferencesList');
+            const preferenceDiv = document.createElement('div');
+            preferenceDiv.className = 'column-metadata';
+            preferenceDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="multi-column">
+                    <div class="form-group">
+                        <label>Query Context/Keywords:</label>
+                        <input type="text" name="table_pref_keywords_${tablePreferenceCount}" placeholder="e.g., market share, financial, profit">
+                    </div>
+                    <div class="form-group">
+                        <label>Preferred Table:</label>
+                        <input type="text" name="table_pref_table_${tablePreferenceCount}" placeholder="e.g., market_share_kpis">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Preference Logic:</label>
+                    <textarea name="table_pref_logic_${tablePreferenceCount}" rows="2" placeholder="Explain why this table should be preferred for these types of queries"></textarea>
+                </div>
+            `;
+            container.appendChild(preferenceDiv);
+            tablePreferenceCount++;
+        }
+
+        function addCrossTableRelationship() {
+            const container = document.getElementById('crossTableRelationshipsList');
+            const relationshipDiv = document.createElement('div');
+            relationshipDiv.className = 'column-metadata';
+            relationshipDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="multi-column">
+                    <div class="form-group">
+                        <label>Table 1:</label>
+                        <input type="text" name="cross_table_1_${crossTableRelationshipCount}" placeholder="e.g., pnl_kpis">
+                    </div>
+                    <div class="form-group">
+                        <label>Table 2:</label>
+                        <input type="text" name="cross_table_2_${crossTableRelationshipCount}" placeholder="e.g., market_share_kpis">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Relationship Type:</label>
+                    <select name="cross_relationship_type_${crossTableRelationshipCount}">
+                        <option value="join">Direct Join</option>
+                        <option value="union">Union Compatible</option>
+                        <option value="complementary">Complementary Data</option>
+                        <option value="alternative">Alternative Sources</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Join/Relationship Logic:</label>
+                    <textarea name="cross_relationship_logic_${crossTableRelationshipCount}" rows="3" placeholder="Explain how these tables relate and when to use them together"></textarea>
+                </div>
+            `;
+            container.appendChild(relationshipDiv);
+            crossTableRelationshipCount++;
+        }
+
+        // [Rest of the existing JavaScript functions remain the same]
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                ${message}
+            `;
+            alertContainer.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        async function loadDatabaseConfigurations() {
+            try {
+                const response = await fetch('/api/database-configs');
+                const configs = await response.json();
+                
+                const select = document.getElementById('databaseConfig');
+                select.innerHTML = '<option value="">-- Select a database configuration --</option>';
+                
+                configs.forEach(config => {
+                    const option = document.createElement('option');
+                    option.value = config.id;
+                    option.textContent = `${config.name} (${config.catalog}.${config.schema})`;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                showAlert('Failed to load database configurations', 'error');
+                console.error('Error loading configs:', error);
+            }
+        }
+
+        async function loadDatabaseConfig() {
+            const configId = document.getElementById('databaseConfig').value;
+            if (!configId) {
+                document.getElementById('configInfo').style.display = 'none';
+                document.getElementById('existingContext').style.display = 'none';
+                document.getElementById('contextForm').classList.remove('active');
+                return;
+            }
+
+            currentConfigId = configId;
+
+            try {
+                // Load config details
+                const configResponse = await fetch(`/api/database-configs/${configId}`);
+                const config = await configResponse.json();
+                
+                document.getElementById('configDetails').innerHTML = `
+                    <strong>Name:</strong> ${config.name}<br>
+                    <strong>Description:</strong> ${config.description}<br>
+                    <strong>Server:</strong> ${config.server_hostname}<br>
+                    <strong>Catalog:</strong> ${config.catalog}<br>
+                    <strong>Schema:</strong> ${config.schema}
+                `;
+                document.getElementById('configInfo').style.display = 'block';
+
+                // Load existing supplemental context
+                try {
+                    const contextResponse = await fetch(`/api/supplemental-context/${configId}`);
+                    if (contextResponse.ok) {
+                        const existingContext = await contextResponse.json();
+                        displayExistingContext(existingContext);
+                        loadExistingContextIntoForm(existingContext);
+                    } else {
+                        document.getElementById('existingContext').style.display = 'none';
+                        resetForm();
+                    }
+                } catch (contextError) {
+                    document.getElementById('existingContext').style.display = 'none';
+                    resetForm();
+                }
+
+                document.getElementById('contextForm').classList.add('active');
+
+            } catch (error) {
+                showAlert('Failed to load database configuration', 'error');
+                console.error('Error loading config:', error);
+            }
+        }
+
+        function displayExistingContext(context) {
+            const details = document.getElementById('existingContextDetails');
+            let html = '';
+
+            if (context.database_description) {
+                html += `<p><strong>Database Description:</strong> ${context.database_description.substring(0, 200)}...</p>`;
+            }
+
+            if (context.schema_architecture) {
+                html += `<p><strong>Schema Type:</strong> ${context.schema_architecture.schema_type}</p>`;
+            }
+
+            if (context.hierarchy_definitions && Object.keys(context.hierarchy_definitions).length > 0) {
+                html += `<p><strong>Hierarchies Defined:</strong> ${Object.keys(context.hierarchy_definitions).length} hierarchies</p>`;
+            }
+
+            if (context.business_glossary && Object.keys(context.business_glossary).length > 0) {
+                html += `<p><strong>Business Terms:</strong> ${Object.keys(context.business_glossary).length} terms defined</p>`;
+            }
+
+            if (context.table_metadata && Object.keys(context.table_metadata).length > 0) {
+                html += `<p><strong>Tables with Metadata:</strong> ${Object.keys(context.table_metadata).join(', ')}</p>`;
+            }
+
+            details.innerHTML = html || '<p>No supplemental context available</p>';
+            document.getElementById('existingContext').style.display = 'block';
+        }
+
+        function loadExistingContextIntoForm(context) {
+            // Load basic fields
+            document.getElementById('databaseDescription').value = context.database_description || '';
+            document.getElementById('globalInstructions').value = context.global_instructions || '';
+
+            // Load schema architecture
+            if (context.schema_architecture) {
+                document.getElementById('schemaType').value = context.schema_architecture.schema_type || '';
+                toggleSchemaSpecificSections();
+                
+                if (context.schema_architecture.hierarchical_complexity) {
+                    document.getElementById('hierarchicalComplexity').value = context.schema_architecture.hierarchical_complexity;
+                }
+                
+                document.getElementById('hasTemporalAggregations').checked = context.schema_architecture.has_temporal_aggregations || false;
+                document.getElementById('hasMixedActualForecast').checked = context.schema_architecture.has_mixed_actual_forecast || false;
+                document.getElementById('hasColumnAmbiguity').checked = context.schema_architecture.has_column_ambiguity || false;
+            }
+
+            // Load temporal aggregation rules
+            if (context.temporal_aggregation_rules) {
+                document.getElementById('temporalDefaultBehavior').value = context.temporal_aggregation_rules.default_behavior || '';
+                document.getElementById('actualVsForecastLogic').value = context.temporal_aggregation_rules.actual_vs_forecast_logic || '';
+                
+                if (context.temporal_aggregation_rules.aggregation_types) {
+                    Object.entries(context.temporal_aggregation_rules.aggregation_types).forEach(([key, agg]) => {
+                        addTemporalAggregation();
+                        const count = temporalAggregationCount - 1;
+                        document.querySelector(`[name="temporal_agg_code_${count}"]`).value = agg.code || '';
+                        document.querySelector(`[name="temporal_agg_name_${count}"]`).value = agg.name || '';
+                        document.querySelector(`[name="temporal_agg_column_${count}"]`).value = agg.column || '';
+                        document.querySelector(`[name="temporal_agg_description_${count}"]`).value = agg.description || '';
+                    });
+                }
+            }
+
+            // Load hierarchy definitions
+            if (context.hierarchy_definitions) {
+                Object.entries(context.hierarchy_definitions).forEach(([type, hierarchies]) => {
+                    Object.entries(hierarchies).forEach(([name, hierarchy]) => {
+                        addHierarchyDefinition(type);
+                        const count = hierarchyCount - 1;
+                        document.querySelector(`[name="hierarchy_${type}_name_${count}"]`).value = hierarchy.name || '';
+                        document.querySelector(`[name="hierarchy_${type}_code_col_${count}"]`).value = hierarchy.code_column || '';
+                        document.querySelector(`[name="hierarchy_${type}_name_col_${count}"]`).value = hierarchy.name_column || '';
+                        document.querySelector(`[name="hierarchy_${type}_levels_${count}"]`).value = (hierarchy.levels || []).join(', ');
+                        document.querySelector(`[name="hierarchy_${type}_description_${count}"]`).value = hierarchy.description || '';
+                    });
+                });
+            }
+
+            // Load disambiguation rules
+            if (context.disambiguation_rules) {
+                if (context.disambiguation_rules.column_rules) {
+                    Object.entries(context.disambiguation_rules.column_rules).forEach(([column, rule]) => {
+                        addDisambiguationRule();
+                        const count = disambiguationRuleCount - 1;
+                        document.querySelector(`[name="disambig_column_${count}"]`).value = column;
+                        document.querySelector(`[name="disambig_tables_${count}"]`).value = (rule.tables || []).join(', ');
+                        document.querySelector(`[name="disambig_logic_${count}"]`).value = rule.logic || '';
+                    });
+                }
+
+                if (context.disambiguation_rules.table_preferences) {
+                    Object.entries(context.disambiguation_rules.table_preferences).forEach(([key, pref]) => {
+                        addTablePreference();
+                        const count = tablePreferenceCount - 1;
+                        document.querySelector(`[name="table_pref_keywords_${count}"]`).value = (pref.keywords || []).join(', ');
+                        document.querySelector(`[name="table_pref_table_${count}"]`).value = pref.table || '';
+                        document.querySelector(`[name="table_pref_logic_${count}"]`).value = pref.logic || '';
+                    });
+                }
+            }
+
+            // Load cross-table relationships
+            if (context.cross_table_relationships) {
+                Object.entries(context.cross_table_relationships).forEach(([key, rel]) => {
+                    addCrossTableRelationship();
+                    const count = crossTableRelationshipCount - 1;
+                    document.querySelector(`[name="cross_table_1_${count}"]`).value = rel.table1 || '';
+                    document.querySelector(`[name="cross_table_2_${count}"]`).value = rel.table2 || '';
+                    document.querySelector(`[name="cross_relationship_type_${count}"]`).value = rel.type || '';
+                    document.querySelector(`[name="cross_relationship_logic_${count}"]`).value = rel.logic || '';
+                });
+            }
+
+            // Clear existing standard sections
+            document.getElementById('businessGlossary').innerHTML = '';
+            document.getElementById('kpiDefinitions').innerHTML = '';
+            document.getElementById('tableMetadata').innerHTML = '';
+
+            // Reset counters for standard sections
+            glossaryTermCount = 0;
+            kpiDefinitionCount = 0;
+            tableMetadataCount = 0;
+
+            // Load standard sections (existing functionality)
+            if (context.business_glossary) {
+                Object.entries(context.business_glossary).forEach(([term, definition]) => {
+                    addGlossaryTerm(term, definition);
+                });
+            }
+
+            if (context.kpi_definitions) {
+                Object.entries(context.kpi_definitions).forEach(([kpi, definition]) => {
+                    addKPIDefinition(kpi, definition);
+                });
+            }
+
+            if (context.table_metadata) {
+                Object.entries(context.table_metadata).forEach(([tableName, metadata]) => {
+                    addTableMetadata(tableName, metadata);
+                });
+            }
+        }
+
+        function addGlossaryTerm(term = '', definition = '') {
+            const container = document.getElementById('businessGlossary');
+            const termDiv = document.createElement('div');
+            termDiv.className = 'column-metadata';
+            termDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="form-group">
+                    <label>Term:</label>
+                    <input type="text" name="glossaryTerm_${glossaryTermCount}" value="${term}" placeholder="Business term or concept">
+                </div>
+                <div class="form-group">
+                    <label>Definition:</label>
+                    <textarea name="glossaryDefinition_${glossaryTermCount}" rows="2" placeholder="Definition or explanation">${definition}</textarea>
+                </div>
+            `;
+            container.appendChild(termDiv);
+            glossaryTermCount++;
+        }
+
+        function addKPIDefinition(kpi = '', definition = '') {
+            const container = document.getElementById('kpiDefinitions');
+            const kpiDiv = document.createElement('div');
+            kpiDiv.className = 'column-metadata';
+            kpiDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="form-group">
+                    <label>KPI Name:</label>
+                    <input type="text" name="kpiName_${kpiDefinitionCount}" value="${kpi}" placeholder="KPI name (e.g., Customer Acquisition Cost)">
+                </div>
+                <div class="form-group">
+                    <label>Formula/Definition:</label>
+                    <textarea name="kpiDefinition_${kpiDefinitionCount}" rows="3" placeholder="KPI calculation formula and business definition">${definition}</textarea>
+                </div>
+            `;
+            container.appendChild(kpiDiv);
+            kpiDefinitionCount++;
+        }
+
+        function addTableMetadata(tableName = '', metadata = {}) {
+            const container = document.getElementById('tableMetadata');
+            const tableDiv = document.createElement('div');
+            tableDiv.className = 'table-metadata';
+            
+            const tableId = `table_${tableMetadataCount}`;
+            tableDiv.innerHTML = `
+                <h4>
+                    Table Metadata
+                    <button type="button" class="remove-button" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </h4>
+                <div class="form-group">
+                    <label>Table Name:</label>
+                    <input type="text" name="tableName_${tableMetadataCount}" value="${tableName}" placeholder="catalog.schema.table_name">
+                </div>
+                <div class="form-group">
+                    <label>Table Description:</label>
+                    <textarea name="tableDescription_${tableMetadataCount}" rows="3" placeholder="Purpose and content of this table">${metadata.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Join Instructions:</label>
+                    <textarea name="joinInstructions_${tableMetadataCount}" rows="2" placeholder="How to join this table with others (e.g., ON table1.id = table2.foreign_id)">${metadata.join_instructions || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Column Metadata:</label>
+                    <button type="button" class="add-button" onclick="addColumnMetadata('${tableId}')">
+                        <i class="fas fa-plus"></i> Add Column
+                    </button>
+                    <div id="${tableId}_columns"></div>
+                </div>
+                <div class="form-group">
+                    <label>Derived KPIs:</label>
+                    <button type="button" class="add-button" onclick="addDerivedKPI('${tableId}')">
+                        <i class="fas fa-plus"></i> Add KPI
+                    </button>
+                    <div id="${tableId}_kpis"></div>
+                </div>
+            `;
+            
+            container.appendChild(tableDiv);
+            
+            // Load existing column metadata
+            if (metadata.column_metadata) {
+                Object.entries(metadata.column_metadata).forEach(([colName, colMeta]) => {
+                    addColumnMetadata(tableId, colName, colMeta);
+                });
+            }
+
+            // Load existing derived KPIs
+            if (metadata.derived_kpis) {
+                Object.entries(metadata.derived_kpis).forEach(([kpiName, formula]) => {
+                    addDerivedKPI(tableId, kpiName, formula);
+                });
+            }
+
+            tableMetadataCount++;
+        }
+
+        function addColumnMetadata(tableId, columnName = '', metadata = {}) {
+            const container = document.getElementById(`${tableId}_columns`);
+            const colDiv = document.createElement('div');
+            colDiv.className = 'column-metadata';
+            colDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="form-group">
+                    <label>Column Name:</label>
+                    <input type="text" name="${tableId}_colName" value="${columnName}" placeholder="column_name">
+                </div>
+                <div class="form-group">
+                    <label>Data Type Info:</label>
+                    <select name="${tableId}_dataTypeInfo">
+                        <option value="">-- Select type --</option>
+                        <option value="absolute_values" ${metadata.data_type_info === 'absolute_values' ? 'selected' : ''}>Absolute Values</option>
+                        <option value="percentages" ${metadata.data_type_info === 'percentages' ? 'selected' : ''}>Percentages</option>
+                        <option value="index_values" ${metadata.data_type_info === 'index_values' ? 'selected' : ''}>Index Values</option>
+                        <option value="currency" ${metadata.data_type_info === 'currency' ? 'selected' : ''}>Currency</option>
+                        <option value="dates" ${metadata.data_type_info === 'dates' ? 'selected' : ''}>Dates</option>
+                        <option value="categorical" ${metadata.data_type_info === 'categorical' ? 'selected' : ''}>Categorical</option>
+                        <option value="hierarchical_code" ${metadata.data_type_info === 'hierarchical_code' ? 'selected' : ''}>Hierarchical Code</option>
+                        <option value="hierarchical_name" ${metadata.data_type_info === 'hierarchical_name' ? 'selected' : ''}>Hierarchical Name</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea name="${tableId}_colDescription" rows="2" placeholder="Column description and business meaning">${metadata.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Allowed Aggregations:</label>
+                    <input type="text" name="${tableId}_allowedAgg" value="${(metadata.allowed_aggregations || []).join(', ')}" placeholder="SUM, AVG, COUNT, MAX, MIN (comma-separated)">
+                </div>
+            `;
+            container.appendChild(colDiv);
+        }
+
+        function addDerivedKPI(tableId, kpiName = '', formula = '') {
+            const container = document.getElementById(`${tableId}_kpis`);
+            const kpiDiv = document.createElement('div');
+            kpiDiv.className = 'kpi-formula';
+            kpiDiv.innerHTML = `
+                <button type="button" class="remove-button" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="form-group">
+                    <label>KPI Name:</label>
+                    <input type="text" name="${tableId}_kpiName" value="${kpiName}" placeholder="KPI name">
+                </div>
+                <div class="form-group">
+                    <label>Formula:</label>
+                    <textarea name="${tableId}_kpiFormula" rows="2" placeholder="SQL formula or calculation logic">${formula}</textarea>
+                </div>
+            `;
+            container.appendChild(kpiDiv);
+        }
+
+        function collectFormData() {
+            const formData = {
+                database_description: document.getElementById('databaseDescription').value,
+                global_instructions: document.getElementById('globalInstructions').value,
+                business_glossary: {},
+                kpi_definitions: {},
+                table_metadata: {},
+                // New enhanced sections
+                schema_architecture: {},
+                hierarchy_definitions: {},
+                temporal_aggregation_rules: {},
+                disambiguation_rules: {},
+                cross_table_relationships: {}
+            };
+
+            // Collect schema architecture
+            const schemaType = document.getElementById('schemaType').value;
+            if (schemaType) {
+                formData.schema_architecture = {
+                    schema_type: schemaType,
+                    hierarchical_complexity: document.getElementById('hierarchicalComplexity').value,
+                    has_temporal_aggregations: document.getElementById('hasTemporalAggregations').checked,
+                    has_mixed_actual_forecast: document.getElementById('hasMixedActualForecast').checked,
+                    has_column_ambiguity: document.getElementById('hasColumnAmbiguity').checked
+                };
+            }
+
+            // Collect temporal aggregation rules
+            formData.temporal_aggregation_rules = {
+                default_behavior: document.getElementById('temporalDefaultBehavior').value,
+                actual_vs_forecast_logic: document.getElementById('actualVsForecastLogic').value,
+                aggregation_types: {}
+            };
+
+            // Collect temporal aggregations
+            for (let i = 0; i < temporalAggregationCount; i++) {
+                const code = document.querySelector(`[name="temporal_agg_code_${i}"]`)?.value;
+                if (code) {
+                    formData.temporal_aggregation_rules.aggregation_types[code] = {
+                        code: code,
+                        name: document.querySelector(`[name="temporal_agg_name_${i}"]`)?.value || '',
+                        column: document.querySelector(`[name="temporal_agg_column_${i}"]`)?.value || '',
+                        description: document.querySelector(`[name="temporal_agg_description_${i}"]`)?.value || ''
+                    };
+                }
+            }
+
+            // Collect hierarchy definitions
+            ['businessUnit', 'product', 'other'].forEach(type => {
+                formData.hierarchy_definitions[type] = {};
+                for (let i = 0; i < hierarchyCount; i++) {
+                    const name = document.querySelector(`[name="hierarchy_${type}_name_${i}"]`)?.value;
+                    if (name) {
+                        formData.hierarchy_definitions[type][name] = {
+                            name: name,
+                            code_column: document.querySelector(`[name="hierarchy_${type}_code_col_${i}"]`)?.value || '',
+                            name_column: document.querySelector(`[name="hierarchy_${type}_name_col_${i}"]`)?.value || '',
+                            levels: (document.querySelector(`[name="hierarchy_${type}_levels_${i}"]`)?.value || '').split(',').map(s => s.trim()).filter(s => s),
+                            description: document.querySelector(`[name="hierarchy_${type}_description_${i}"]`)?.value || ''
+                        };
+                    }
+                }
+            });
+
+            // Collect disambiguation rules
+            formData.disambiguation_rules = {
+                column_rules: {},
+                table_preferences: {}
+            };
+
+            // Column disambiguation rules
+            for (let i = 0; i < disambiguationRuleCount; i++) {
+                const column = document.querySelector(`[name="disambig_column_${i}"]`)?.value;
+                if (column) {
+                    formData.disambiguation_rules.column_rules[column] = {
+                        tables: (document.querySelector(`[name="disambig_tables_${i}"]`)?.value || '').split(',').map(s => s.trim()).filter(s => s),
+                        logic: document.querySelector(`[name="disambig_logic_${i}"]`)?.value || ''
+                    };
+                }
+            }
+
+            // Table preferences
+            for (let i = 0; i < tablePreferenceCount; i++) {
+                const keywords = document.querySelector(`[name="table_pref_keywords_${i}"]`)?.value;
+                if (keywords) {
+                    const key = `pref_${i}`;
+                    formData.disambiguation_rules.table_preferences[key] = {
+                        keywords: keywords.split(',').map(s => s.trim()).filter(s => s),
+                        table: document.querySelector(`[name="table_pref_table_${i}"]`)?.value || '',
+                        logic: document.querySelector(`[name="table_pref_logic_${i}"]`)?.value || ''
+                    };
+                }
+            }
+
+            // Collect cross-table relationships
+            for (let i = 0; i < crossTableRelationshipCount; i++) {
+                const table1 = document.querySelector(`[name="cross_table_1_${i}"]`)?.value;
+                const table2 = document.querySelector(`[name="cross_table_2_${i}"]`)?.value;
+                if (table1 && table2) {
+                    const key = `${table1}_${table2}`;
+                    formData.cross_table_relationships[key] = {
+                        table1: table1,
+                        table2: table2,
+                        type: document.querySelector(`[name="cross_relationship_type_${i}"]`)?.value || '',
+                        logic: document.querySelector(`[name="cross_relationship_logic_${i}"]`)?.value || ''
+                    };
+                }
+            }
+
+            // Collect existing sections (business glossary, KPIs, table metadata)
+            const glossaryTerms = document.querySelectorAll('[name^="glossaryTerm_"]');
+            glossaryTerms.forEach((termInput, index) => {
+                const term = termInput.value.trim();
+                const definitionInput = document.querySelector(`[name="glossaryDefinition_${termInput.name.split('_')[1]}"]`);
+                if (term && definitionInput && definitionInput.value.trim()) {
+                    formData.business_glossary[term] = definitionInput.value.trim();
+                }
+            });
+
+            const kpiNames = document.querySelectorAll('[name^="kpiName_"]');
+            kpiNames.forEach((nameInput) => {
+                const kpiName = nameInput.value.trim();
+                const kpiId = nameInput.name.split('_')[1];
+                const definitionInput = document.querySelector(`[name="kpiDefinition_${kpiId}"]`);
+                if (kpiName && definitionInput && definitionInput.value.trim()) {
+                    formData.kpi_definitions[kpiName] = definitionInput.value.trim();
+                }
+            });
+
+            const tableNames = document.querySelectorAll('[name^="tableName_"]');
+            tableNames.forEach((tableNameInput) => {
+                const tableName = tableNameInput.value.trim();
+                const tableId = tableNameInput.name.split('_')[1];
+                
+                if (tableName) {
+                    const tableDescription = document.querySelector(`[name="tableDescription_${tableId}"]`).value;
+                    const joinInstructions = document.querySelector(`[name="joinInstructions_${tableId}"]`).value;
+                    
+                    formData.table_metadata[tableName] = {
+                        description: tableDescription,
+                        join_instructions: joinInstructions,
+                        column_metadata: {},
+                        derived_kpis: {}
+                    };
+
+                    // Collect column metadata for this table
+                    const tableColNames = document.querySelectorAll(`[name="table_${tableId}_colName"]`);
+                    tableColNames.forEach((colNameInput) => {
+                        const colName = colNameInput.value.trim();
+                        if (colName) {
+                            const colContainer = colNameInput.closest('.column-metadata');
+                            const dataTypeInfo = colContainer.querySelector(`[name="table_${tableId}_dataTypeInfo"]`).value;
+                            const colDescription = colContainer.querySelector(`[name="table_${tableId}_colDescription"]`).value;
+                            const allowedAgg = colContainer.querySelector(`[name="table_${tableId}_allowedAgg"]`).value;
+
+                            formData.table_metadata[tableName].column_metadata[colName] = {
+                                data_type_info: dataTypeInfo,
+                                description: colDescription,
+                                allowed_aggregations: allowedAgg ? allowedAgg.split(',').map(s => s.trim()) : []
+                            };
+                        }
+                    });
+
+                    // Collect derived KPIs for this table
+                    const tableKpiNames = document.querySelectorAll(`[name="table_${tableId}_kpiName"]`);
+                    tableKpiNames.forEach((kpiNameInput) => {
+                        const kpiName = kpiNameInput.value.trim();
+                        if (kpiName) {
+                            const kpiContainer = kpiNameInput.closest('.kpi-formula');
+                            const formula = kpiContainer.querySelector(`[name="table_${tableId}_kpiFormula"]`).value;
+                            if (formula) {
+                                formData.table_metadata[tableName].derived_kpis[kpiName] = formula;
+                            }
+                        }
+                    });
+                }
+            });
+
+            return formData;
+        }
+
+        async function saveContext() {
+            if (!currentConfigId) {
+                showAlert('Please select a database configuration first', 'error');
+                return;
+            }
+
+            const formData = collectFormData();
+
+            try {
+                const response = await fetch(`/api/supplemental-context/${currentConfigId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showAlert('Supplemental context saved successfully!', 'success');
+                    loadDatabaseConfig(); // Reload to show updated context
+                } else {
+                    const error = await response.json();
+                    showAlert(`Failed to save context: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert('Error saving context', 'error');
+                console.error('Save error:', error);
+            }
+        }
+
+        function previewContext() {
+            const formData = collectFormData();
+            document.getElementById('previewContent').textContent = JSON.stringify(formData, null, 2);
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function resetForm() {
+            document.getElementById('databaseDescription').value = '';
+            document.getElementById('globalInstructions').value = '';
+            document.getElementById('schemaType').value = '';
+            document.getElementById('hierarchicalComplexity').value = '';
+            document.getElementById('hasTemporalAggregations').checked = false;
+            document.getElementById('hasMixedActualForecast').checked = false;
+            document.getElementById('hasColumnAmbiguity').checked = false;
+            document.getElementById('temporalDefaultBehavior').value = '';
+            document.getElementById('actualVsForecastLogic').value = '';
+            
+            document.getElementById('businessGlossary').innerHTML = '';
+            document.getElementById('kpiDefinitions').innerHTML = '';
+            document.getElementById('tableMetadata').innerHTML = '';
+            document.getElementById('businessUnitHierarchies').innerHTML = '';
+            document.getElementById('productHierarchies').innerHTML = '';
+            document.getElementById('otherHierarchies').innerHTML = '';
+            document.getElementById('temporalAggregationsList').innerHTML = '';
+            document.getElementById('disambiguationRulesList').innerHTML = '';
+            document.getElementById('tablePreferencesList').innerHTML = '';
+            document.getElementById('crossTableRelationshipsList').innerHTML = '';
+            
+            glossaryTermCount = 0;
+            kpiDefinitionCount = 0;
+            tableMetadataCount = 0;
+            hierarchyCount = 0;
+            temporalAggregationCount = 0;
+            disambiguationRuleCount = 0;
+            tablePreferenceCount = 0;
+            crossTableRelationshipCount = 0;
+
+            toggleSchemaSpecificSections();
+        }
+
+        function editExistingContext() {
+            document.getElementById('contextForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteContext() {
+            if (!currentConfigId) return;
+
+            if (confirm('Are you sure you want to delete this supplemental context? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`/api/supplemental-context/${currentConfigId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        showAlert('Supplemental context deleted successfully!', 'success');
+                        document.getElementById('existingContext').style.display = 'none';
+                        resetForm();
+                    } else {
+                        showAlert('Failed to delete context', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Error deleting context', 'error');
+                    console.error('Delete error:', error);
+                }
+            }
+        }
+
+        async function loadExistingContexts() {
+            try {
+                const response = await fetch('/api/supplemental-context');
+                const contexts = await response.json();
+                
+                let message = 'Existing Supplemental Contexts:\n\n';
+                Object.entries(contexts).forEach(([configId, context]) => {
+                    message += `Configuration: ${configId}\n`;
+                    if (context.database_description) {
+                        message += `- Description: ${context.database_description.substring(0, 100)}...\n`;
+                    }
+                    if (context.schema_architecture && context.schema_architecture.schema_type) {
+                        message += `- Schema Type: ${context.schema_architecture.schema_type}\n`;
+                    }
+                    if (context.table_metadata) {
+                        message += `- Tables: ${Object.keys(context.table_metadata).join(', ')}\n`;
+                    }
+                    message += '\n';
+                });
+                
+                alert(message || 'No supplemental contexts found.');
+                
+            } catch (error) {
+                showAlert('Failed to load existing contexts', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

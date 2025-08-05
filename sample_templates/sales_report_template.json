@@ -1,0 +1,197 @@
+{
+  "id": "sales_report_v1",
+  "name": "Monthly Sales Report",
+  "description": "Standard monthly sales performance report template",
+  "version": "1.0",
+  "domain": "sales",
+  "business_context": "This template represents monthly sales performance data typically generated from CRM systems. It includes customer information, product details, sales amounts, and temporal data for analyzing sales trends, customer behavior, and product performance. Key business questions include: revenue growth, top customers, product performance, seasonal trends, and sales rep effectiveness.",
+  "columns": [
+    {
+      "name": "customer_id",
+      "business_name": "Customer ID",
+      "description": "Unique identifier for each customer",
+      "data_type": "text",
+      "business_type": "identifier",
+      "relationships": ["customer_name", "customer_segment"]
+    },
+    {
+      "name": "customer_name",
+      "business_name": "Customer Name",
+      "description": "Name of the customer or company",
+      "data_type": "text",
+      "business_type": "dimension",
+      "relationships": ["customer_id", "customer_segment"]
+    },
+    {
+      "name": "customer_segment",
+      "business_name": "Customer Segment",
+      "description": "Business segment classification (Enterprise, SMB, Individual)",
+      "data_type": "categorical",
+      "business_type": "dimension",
+      "expected_values": ["Enterprise", "SMB", "Individual"],
+      "relationships": ["customer_id", "customer_name"]
+    },
+    {
+      "name": "product_name",
+      "business_name": "Product Name",
+      "description": "Name of the product sold",
+      "data_type": "text",
+      "business_type": "dimension",
+      "relationships": ["product_category", "unit_price"]
+    },
+    {
+      "name": "product_category",
+      "business_name": "Product Category",
+      "description": "Category classification of the product",
+      "data_type": "categorical",
+      "business_type": "dimension",
+      "relationships": ["product_name"]
+    },
+    {
+      "name": "quantity",
+      "business_name": "Quantity Sold",
+      "description": "Number of units sold",
+      "data_type": "numeric",
+      "business_type": "metric",
+      "unit": "units",
+      "valid_range": [1, 10000],
+      "relationships": ["revenue", "unit_price"]
+    },
+    {
+      "name": "unit_price",
+      "business_name": "Unit Price",
+      "description": "Price per unit of the product",
+      "data_type": "numeric",
+      "business_type": "metric",
+      "unit": "USD",
+      "valid_range": [0.01, 100000],
+      "relationships": ["revenue", "quantity"]
+    },
+    {
+      "name": "revenue",
+      "business_name": "Total Revenue",
+      "description": "Total revenue from the sale (quantity × unit_price)",
+      "data_type": "numeric",
+      "business_type": "metric",
+      "unit": "USD",
+      "valid_range": [0.01, 1000000],
+      "relationships": ["quantity", "unit_price"]
+    },
+    {
+      "name": "sale_date",
+      "business_name": "Sale Date",
+      "description": "Date when the sale was completed",
+      "data_type": "datetime",
+      "business_type": "timestamp",
+      "relationships": ["month", "quarter"]
+    },
+    {
+      "name": "sales_rep",
+      "business_name": "Sales Representative",
+      "description": "Name of the sales representative who closed the deal",
+      "data_type": "text",
+      "business_type": "dimension"
+    },
+    {
+      "name": "region",
+      "business_name": "Sales Region",
+      "description": "Geographic region where the sale occurred",
+      "data_type": "categorical",
+      "business_type": "dimension",
+      "expected_values": ["North", "South", "East", "West", "International"]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Total Revenue",
+      "description": "Sum of all revenue across selected data",
+      "formula": "current_data['revenue'].sum()",
+      "category": "financial",
+      "display_format": "$%.2f"
+    },
+    {
+      "name": "Average Deal Size",
+      "description": "Average revenue per sale transaction",
+      "formula": "current_data['revenue'].mean()",
+      "category": "performance",
+      "display_format": "$%.2f"
+    },
+    {
+      "name": "Total Units Sold",
+      "description": "Total quantity of products sold",
+      "formula": "current_data['quantity'].sum()",
+      "category": "operational",
+      "display_format": "%.0f units"
+    },
+    {
+      "name": "Customer Count",
+      "description": "Number of unique customers",
+      "formula": "current_data['customer_id'].nunique()",
+      "category": "performance",
+      "display_format": "%.0f customers"
+    },
+    {
+      "name": "Revenue per Customer",
+      "description": "Average revenue per customer",
+      "formula": "current_data.groupby('customer_id')['revenue'].sum().mean()",
+      "category": "performance",
+      "display_format": "$%.2f"
+    }
+  ],
+  "visualizations": [
+    {
+      "name": "Revenue by Product Category",
+      "description": "Bar chart showing total revenue for each product category",
+      "chart_type": "bar",
+      "x_axis": "product_category",
+      "y_axis": "revenue"
+    },
+    {
+      "name": "Sales Trend Over Time",
+      "description": "Line chart showing revenue trends over time",
+      "chart_type": "line",
+      "x_axis": "sale_date",
+      "y_axis": "revenue"
+    },
+    {
+      "name": "Top Customers by Revenue",
+      "description": "Bar chart of top 10 customers by total revenue",
+      "chart_type": "bar",
+      "x_axis": "customer_name",
+      "y_axis": "revenue"
+    },
+    {
+      "name": "Revenue by Region",
+      "description": "Pie chart showing revenue distribution across regions",
+      "chart_type": "pie",
+      "x_axis": "region",
+      "y_axis": "revenue"
+    },
+    {
+      "name": "Sales Rep Performance",
+      "description": "Bar chart comparing sales performance by representative",
+      "chart_type": "bar",
+      "x_axis": "sales_rep",
+      "y_axis": "revenue"
+    }
+  ],
+  "common_analyses": [
+    "Show total revenue and compare to previous period",
+    "Identify top 10 customers by revenue",
+    "Analyze revenue trends by month",
+    "Compare performance across different product categories",
+    "Evaluate sales rep performance and rankings",
+    "Calculate customer acquisition metrics",
+    "Analyze seasonal sales patterns",
+    "Identify highest and lowest performing regions",
+    "Calculate average deal size and trends",
+    "Show revenue distribution by customer segment"
+  ],
+  "detection_rules": {
+    "required_columns": ["customer_id", "revenue", "sale_date", "product_name"],
+    "column_patterns": ["customer", "revenue", "sales", "product", "date"],
+    "filename_patterns": ["sales", "revenue", "monthly", "report"]
+  },
+  "created_date": "2024-01-15T10:00:00Z",
+  "last_modified": "2024-01-15T10:00:00Z"
+}

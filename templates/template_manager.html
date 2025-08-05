@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Manager - Data Wizard</title>
+	<!-- Bootstrap CSS -->
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+	<!-- Font Awesome -->
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background: linear-gradient(135deg, #f5f7fa 0%, #e8f2ff 100%);
+			margin: 0;
+			padding: 0;
+			min-height: 100vh;
+			color: #73706E;
+		}
+		
+		.main-container {
+			min-height: 100vh;
+			padding: 20px;
+		}
+		
+		.header {
+			background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+			color: white;
+			padding: 30px;
+			border-radius: 15px;
+			text-align: center;
+			margin-bottom: 30px;
+			box-shadow: 0 8px 25px rgba(31, 54, 199, 0.15);
+		}
+		
+		.header h1 {
+			font-size: 2.5rem;
+			margin-bottom: 10px;
+			text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+		}
+		
+		.header p {
+			font-size: 1.1rem;
+			opacity: 0.9;
+			margin: 0;
+		}
+		
+		.action-bar {
+			background: white;
+			padding: 20px;
+			border-radius: 15px;
+			margin-bottom: 20px;
+			box-shadow: 0 4px 12px rgba(31, 54, 199, 0.08);
+			border: 2px solid #005EEF;
+		}
+		
+		.templates-container {
+			background: white;
+			border-radius: 15px;
+			padding: 30px;
+			box-shadow: 0 8px 25px rgba(31, 54, 199, 0.08);
+			border: 2px solid #005EEF;
+		}
+		
+		.btn-primary {
+			background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+			border: none;
+			border-radius: 20px;
+			padding: 10px 25px;
+			transition: all 0.3s ease;
+			font-family: Arial, sans-serif;
+			font-weight: 600;
+		}
+		
+		.btn-primary:hover {
+			background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+			transform: translateY(-2px);
+			box-shadow: 0 6px 15px rgba(31, 54, 199, 0.25);
+		}
+		
+		.btn-success {
+			background: linear-gradient(135deg, #00B190 0%, #00d4aa 100%);
+			border: none;
+			border-radius: 20px;
+			padding: 10px 25px;
+			transition: all 0.3s ease;
+			font-weight: 600;
+		}
+		
+		.btn-success:hover {
+			background: linear-gradient(135deg, #009370 0%, #00b896 100%);
+			transform: translateY(-2px);
+			box-shadow: 0 6px 15px rgba(0, 177, 144, 0.25);
+		}
+		
+		.btn-danger {
+			background: linear-gradient(135deg, #FF544F 0%, #ff3c36 100%);
+			border: none;
+			border-radius: 20px;
+			padding: 8px 20px;
+			transition: all 0.3s ease;
+			font-weight: 600;
+		}
+		
+		.btn-danger:hover {
+			background: linear-gradient(135deg, #e04843 0%, #d63429 100%);
+			transform: translateY(-2px);
+			box-shadow: 0 6px 15px rgba(255, 84, 79, 0.25);
+		}
+		
+		.btn-outline-primary {
+			border: 2px solid #005EEF;
+			color: #005EEF;
+			border-radius: 20px;
+			padding: 8px 20px;
+			transition: all 0.3s ease;
+			font-weight: 600;
+		}
+		
+		.btn-outline-primary:hover {
+			background: #005EEF;
+			border-color: #005EEF;
+			transform: translateY(-2px);
+		}
+		
+		.template-card {
+			background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+			border: 2px solid #e8f2ff;
+			border-radius: 15px;
+			padding: 20px;
+			margin-bottom: 20px;
+			transition: all 0.3s ease;
+			position: relative;
+		}
+		
+		.template-card:hover {
+			border-color: #005EEF;
+			transform: translateY(-3px);
+			box-shadow: 0 8px 25px rgba(31, 54, 199, 0.12);
+		}
+		
+		.template-card.selected {
+			border-color: #1F36C7;
+			background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%);
+			box-shadow: 0 8px 25px rgba(31, 54, 199, 0.15);
+		}
+		
+		.template-card-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			margin-bottom: 15px;
+		}
+		
+		.template-title {
+			font-size: 1.3rem;
+			font-weight: bold;
+			color: #73706E;
+			margin: 0;
+		}
+		
+		.template-type-badge {
+			padding: 4px 12px;
+			border-radius: 15px;
+			font-size: 0.8rem;
+			font-weight: 600;
+			text-transform: uppercase;
+		}
+		
+		.badge-single {
+			background: #e8f5e8;
+			color: #2d7738;
+			border: 1px solid #00B190;
+		}
+		
+		.badge-multi {
+			background: #fff3cd;
+			color: #856404;
+			border: 1px solid #FFC000;
+		}
+		
+		.badge-csv {
+			background: #d1ecf1;
+			color: #0c5460;
+			border: 1px solid #005EEF;
+		}
+		
+		.template-meta {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 15px;
+			margin-bottom: 15px;
+		}
+		
+		.meta-item {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 0.9rem;
+		}
+		
+		.meta-icon {
+			color: #005EEF;
+			width: 16px;
+		}
+		
+		.template-description {
+			color: #73706E;
+			font-style: italic;
+			margin-bottom: 15px;
+			line-height: 1.5;
+		}
+		
+		.template-actions {
+			display: flex;
+			gap: 10px;
+			justify-content: flex-end;
+			align-items: center;
+		}
+		
+		.file-upload-area {
+			border: 3px dashed #005EEF;
+			border-radius: 15px;
+			padding: 40px;
+			text-align: center;
+			background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+			transition: all 0.3s ease;
+			cursor: pointer;
+			margin-bottom: 20px;
+		}
+		
+		.file-upload-area:hover {
+			border-color: #1F36C7;
+			background: linear-gradient(135deg, #f0f4ff 0%, #e6f0ff 100%);
+			transform: scale(1.02);
+		}
+		
+		.file-upload-area.dragover {
+			border-color: #1F36C7;
+			background: linear-gradient(135deg, #e8f2ff 0%, #d1e7ff 100%);
+			transform: scale(1.03);
+		}
+		
+		.upload-icon {
+			font-size: 3rem;
+			color: #005EEF;
+			margin-bottom: 15px;
+		}
+		
+		.loading {
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			border: 2px solid #f3f3f3;
+			border-top: 2px solid #005EEF;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+		}
+		
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+		
+		.alert {
+			border-radius: 10px;
+			border: none;
+			padding: 15px 20px;
+			margin-bottom: 20px;
+		}
+		
+		.alert-success {
+			background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+			color: #155724;
+			border-left: 4px solid #00B190;
+		}
+		
+		.alert-danger {
+			background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+			color: #721c24;
+			border-left: 4px solid #FF544F;
+		}
+		
+		.alert-warning {
+			background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+			color: #856404;
+			border-left: 4px solid #FFC000;
+		}
+		
+		.checkbox-container {
+			position: absolute;
+			top: 15px;
+			left: 15px;
+		}
+		
+		.form-check-input:checked {
+			background-color: #005EEF;
+			border-color: #005EEF;
+		}
+		
+		.bulk-actions {
+			display: none;
+			align-items: center;
+			gap: 15px;
+			margin-bottom: 20px;
+			padding: 15px;
+			background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+			border-radius: 10px;
+			border-left: 4px solid #FFC000;
+		}
+		
+		.bulk-actions.show {
+			display: flex;
+		}
+		
+		.empty-state {
+			text-align: center;
+			padding: 60px 20px;
+			color: #73706E;
+		}
+		
+		.empty-icon {
+			font-size: 4rem;
+			color: #005EEF;
+			margin-bottom: 20px;
+			opacity: 0.5;
+		}
+		
+		.navigation-bar {
+			background: white;
+			padding: 15px 20px;
+			border-radius: 15px;
+			margin-bottom: 20px;
+			box-shadow: 0 4px 12px rgba(31, 54, 199, 0.08);
+			border: 2px solid #005EEF;
+		}
+		
+		.nav-links {
+			display: flex;
+			gap: 20px;
+			align-items: center;
+		}
+		
+		.nav-link {
+			color: #73706E;
+			text-decoration: none;
+			font-weight: 600;
+			padding: 8px 15px;
+			border-radius: 20px;
+			transition: all 0.3s ease;
+		}
+		
+		.nav-link:hover {
+			background: #e8f2ff;
+			color: #005EEF;
+		}
+		
+		.nav-link.active {
+			background: #005EEF;
+			color: white;
+		}
+		
+		/* Custom scrollbar */
+		::-webkit-scrollbar {
+			width: 8px;
+		}
+		
+		::-webkit-scrollbar-track {
+			background: #f1f1f1;
+			border-radius: 4px;
+		}
+		
+		::-webkit-scrollbar-thumb {
+			background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+			border-radius: 4px;
+		}
+		
+		::-webkit-scrollbar-thumb:hover {
+			background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+		}
+		
+		@media (max-width: 768px) {
+			.template-meta {
+				grid-template-columns: 1fr;
+			}
+			
+			.template-actions {
+				justify-content: center;
+				flex-wrap: wrap;
+			}
+			
+			.bulk-actions {
+				flex-direction: column;
+				align-items: stretch;
+				text-align: center;
+			}
+			
+			.nav-links {
+				flex-direction: column;
+				gap: 10px;
+			}
+		}
+	</style>
+</head>
+<body>
+    <div class="container-fluid main-container">
+        <!-- Navigation Bar -->
+        <div class="navigation-bar">
+            <div class="nav-links">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i> Data Wizard
+                </a>
+                <a href="/template-creator" class="nav-link">
+                    <i class="fas fa-plus-circle"></i> Create Template
+                </a>
+                <a href="/template-manager" class="nav-link active">
+                    <i class="fas fa-cog"></i> Manage Templates
+                </a>
+            </div>
+        </div>
+		
+		<!-- Header -->
+		<div class="header">
+			<h1><i class="fas fa-layer-group"></i> Template Manager</h1>
+			<p>Manage your data analysis templates - view, upload, and organize template files</p>
+		</div>
+
+		<!-- Action Bar -->
+		<div class="action-bar">
+			<div class="row align-items-center">
+				<div class="col-md-8">
+					<h5 class="mb-0"><i class="fas fa-upload"></i> Upload New Template</h5>
+					<small class="text-muted">Drop JSON template files here or click to browse</small>
+				</div>
+				<div class="col-md-4 text-end">
+					<button class="btn btn-primary" id="refreshBtn">
+						<i class="fas fa-sync-alt"></i> Refresh
+					</button>
+				</div>
+			</div>
+			
+			<!-- File Upload Area -->
+			<div class="file-upload-area mt-3" id="uploadArea">
+				<i class="fas fa-cloud-upload-alt upload-icon"></i>
+				<h5>Drop JSON template files here</h5>
+				<p class="mb-3">or click to browse files</p>
+				<button class="btn btn-success" id="browseBtn">
+					<i class="fas fa-folder-open"></i> Browse Files
+				</button>
+				<input type="file" id="fileInput" accept=".json" multiple style="display: none;">
+				<div class="mt-2">
+					<small class="text-muted">Supported: .json files only | Max size: 10MB per file</small>
+				</div>
+			</div>
+		</div>
+
+		<!-- Bulk Actions -->
+		<div class="bulk-actions" id="bulkActions">
+			<div>
+				<strong><span id="selectedCount">0</span> template(s) selected</strong>
+			</div>
+			<div class="ms-auto">
+				<button class="btn btn-outline-primary btn-sm" id="selectAllBtn">
+					<i class="fas fa-check-square"></i> Select All
+				</button>
+				<button class="btn btn-outline-primary btn-sm" id="deselectAllBtn">
+					<i class="fas fa-square"></i> Deselect All
+				</button>
+				<button class="btn btn-danger btn-sm" id="deleteSelectedBtn">
+					<i class="fas fa-trash"></i> Delete Selected
+				</button>
+			</div>
+		</div>
+
+		<!-- Alert Area -->
+		<div id="alertArea"></div>
+
+		<!-- Templates Container -->
+		<div class="templates-container">
+			<div class="d-flex justify-content-between align-items-center mb-4">
+				<h4><i class="fas fa-file-code"></i> Template Files</h4>
+				<div class="text-muted">
+					<small id="templateCount">Loading...</small>
+				</div>
+			</div>
+			
+			<div id="templatesListContainer">
+				<div class="text-center py-5">
+					<div class="loading"></div>
+					<p class="mt-3">Loading templates...</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Bootstrap JS -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+	<script>
+		let templates = [];
+		let selectedTemplates = new Set();
+
+		// DOM Elements
+		const uploadArea = document.getElementById('uploadArea');
+		const fileInput = document.getElementById('fileInput');
+		const browseBtn = document.getElementById('browseBtn');
+		const refreshBtn = document.getElementById('refreshBtn');
+		const templatesContainer = document.getElementById('templatesListContainer');
+		const alertArea = document.getElementById('alertArea');
+		const bulkActions = document.getElementById('bulkActions');
+		const selectedCount = document.getElementById('selectedCount');
+		const selectAllBtn = document.getElementById('selectAllBtn');
+		const deselectAllBtn = document.getElementById('deselectAllBtn');
+		const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+		const templateCount = document.getElementById('templateCount');
+
+		// Event Listeners
+		browseBtn.addEventListener('click', () => fileInput.click());
+		fileInput.addEventListener('change', handleFileSelect);
+		refreshBtn.addEventListener('click', loadTemplates);
+		selectAllBtn.addEventListener('click', selectAllTemplates);
+		deselectAllBtn.addEventListener('click', deselectAllTemplates);
+		deleteSelectedBtn.addEventListener('click', deleteSelectedTemplates);
+
+		// Drag and Drop
+		uploadArea.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			uploadArea.classList.add('dragover');
+		});
+
+		uploadArea.addEventListener('dragleave', () => {
+			uploadArea.classList.remove('dragover');
+		});
+
+		uploadArea.addEventListener('drop', (e) => {
+			e.preventDefault();
+			uploadArea.classList.remove('dragover');
+			const files = Array.from(e.dataTransfer.files);
+			if (files.length > 0) {
+				handleFileUpload(files);
+			}
+		});
+
+		uploadArea.addEventListener('click', (e) => {
+			if (e.target === uploadArea || e.target.closest('.upload-icon, h5, p')) {
+				fileInput.click();
+			}
+		});
+
+		// Functions
+		function handleFileSelect(e) {
+			const files = Array.from(e.target.files);
+			if (files.length > 0) {
+				handleFileUpload(files);
+			}
+		}
+
+		function handleFileUpload(files) {
+			const jsonFiles = files.filter(file => file.name.toLowerCase().endsWith('.json'));
+			
+			if (jsonFiles.length === 0) {
+				showAlert('No valid JSON files selected. Please upload .json template files.', 'warning');
+				return;
+			}
+
+			if (jsonFiles.length !== files.length) {
+				showAlert(`${files.length - jsonFiles.length} non-JSON files ignored. Only JSON files are allowed.`, 'warning');
+			}
+
+			// Upload each file
+			jsonFiles.forEach(file => uploadSingleFile(file));
+		}
+
+		function uploadSingleFile(file) {
+			const formData = new FormData();
+			formData.append('template_file', file);
+
+			showAlert(`Uploading ${file.name}...`, 'info');
+
+			fetch('/api/templates/upload', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					showAlert(`Successfully uploaded ${data.filename}`, 'success');
+					loadTemplates(); // Refresh the list
+				} else {
+					showAlert(`Failed to upload ${file.name}: ${data.error}`, 'danger');
+				}
+			})
+			.catch(error => {
+				showAlert(`Error uploading ${file.name}: ${error.message}`, 'danger');
+			});
+		}
+
+		function loadTemplates() {
+			templatesContainer.innerHTML = `
+				<div class="text-center py-5">
+					<div class="loading"></div>
+					<p class="mt-3">Loading templates...</p>
+				</div>
+			`;
+
+			fetch('/api/templates/files')
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						templates = data.files;
+						displayTemplates(templates);
+						templateCount.textContent = `${templates.length} template(s) found`;
+					} else {
+						showAlert(`Error loading templates: ${data.error}`, 'danger');
+						templatesContainer.innerHTML = '<div class="alert alert-danger">Failed to load templates</div>';
+					}
+				})
+				.catch(error => {
+					showAlert(`Error loading templates: ${error.message}`, 'danger');
+					templatesContainer.innerHTML = '<div class="alert alert-danger">Network error loading templates</div>';
+				});
+		}
+
+		function displayTemplates(templates) {
+			if (templates.length === 0) {
+				templatesContainer.innerHTML = `
+					<div class="empty-state">
+						<i class="fas fa-file-plus empty-icon"></i>
+						<h4>No templates found</h4>
+						<p>Upload your first template file to get started!</p>
+					</div>
+				`;
+				return;
+			}
+
+			const templatesHTML = templates.map(template => {
+				const typeClass = getTypeClass(template.template_info.template_type);
+				const typeBadge = getTypeBadge(template.template_info.template_type);
+				
+				return `
+					<div class="template-card" data-filename="${template.filename}">
+						<div class="checkbox-container">
+							<input type="checkbox" class="form-check-input template-checkbox" 
+								   data-filename="${template.filename}" onchange="updateSelection()">
+						</div>
+						
+						<div class="template-card-header">
+							<h5 class="template-title">${template.template_info.name}</h5>
+							<span class="template-type-badge ${typeClass}">${typeBadge}</span>
+						</div>
+						
+						<div class="template-meta">
+							<div class="meta-item">
+								<i class="fas fa-tag meta-icon"></i>
+								<span><strong>Domain:</strong> ${template.template_info.domain}</span>
+							</div>
+							<div class="meta-item">
+								<i class="fas fa-code-branch meta-icon"></i>
+								<span><strong>Version:</strong> ${template.template_info.version}</span>
+							</div>
+							<div class="meta-item">
+								<i class="fas fa-file meta-icon"></i>
+								<span><strong>File:</strong> ${template.filename}</span>
+							</div>
+							<div class="meta-item">
+								<i class="fas fa-weight meta-icon"></i>
+								<span><strong>Size:</strong> ${template.size_formatted}</span>
+							</div>
+							<div class="meta-item">
+								<i class="fas fa-clock meta-icon"></i>
+								<span><strong>Modified:</strong> ${template.modified_formatted}</span>
+							</div>
+						</div>
+						
+						<div class="template-description">
+							${template.template_info.description || 'No description available'}
+						</div>
+						
+						<div class="template-actions">
+							<button class="btn btn-outline-primary btn-sm" onclick="downloadTemplate('${template.filename}')">
+								<i class="fas fa-download"></i> Download
+							</button>
+							<button class="btn btn-danger btn-sm" onclick="deleteTemplate('${template.filename}')">
+								<i class="fas fa-trash"></i> Delete
+							</button>
+						</div>
+					</div>
+				`;
+			}).join('');
+
+			templatesContainer.innerHTML = templatesHTML;
+		}
+
+		function getTypeClass(templateType) {
+			switch (templateType) {
+				case 'multi_worksheet': return 'badge-multi';
+				case 'csv_collection': return 'badge-csv';
+				default: return 'badge-single';
+			}
+		}
+
+		function getTypeBadge(templateType) {
+			switch (templateType) {
+				case 'multi_worksheet': return 'Multi-Worksheet';
+				case 'csv_collection': return 'CSV Collection';
+				default: return 'Single Worksheet';
+			}
+		}
+
+		function updateSelection() {
+			const checkboxes = document.querySelectorAll('.template-checkbox');
+			selectedTemplates.clear();
+			
+			checkboxes.forEach(cb => {
+				const card = cb.closest('.template-card');
+				if (cb.checked) {
+					selectedTemplates.add(cb.dataset.filename);
+					card.classList.add('selected');
+				} else {
+					card.classList.remove('selected');
+				}
+			});
+
+			selectedCount.textContent = selectedTemplates.size;
+			bulkActions.classList.toggle('show', selectedTemplates.size > 0);
+		}
+
+		function selectAllTemplates() {
+			const checkboxes = document.querySelectorAll('.template-checkbox');
+			checkboxes.forEach(cb => {
+				cb.checked = true;
+			});
+			updateSelection();
+		}
+
+		function deselectAllTemplates() {
+			const checkboxes = document.querySelectorAll('.template-checkbox');
+			checkboxes.forEach(cb => {
+				cb.checked = false;
+			});
+			updateSelection();
+		}
+
+		function deleteTemplate(filename) {
+			if (!confirm(`Are you sure you want to delete the template "${filename}"?`)) {
+				return;
+			}
+
+			deleteTemplates([filename]);
+		}
+
+		function deleteSelectedTemplates() {
+			if (selectedTemplates.size === 0) {
+				showAlert('No templates selected for deletion', 'warning');
+				return;
+			}
+
+			const filenames = Array.from(selectedTemplates);
+			const message = filenames.length === 1 
+				? `Are you sure you want to delete the selected template?`
+				: `Are you sure you want to delete ${filenames.length} selected templates?`;
+			
+			if (!confirm(message)) {
+				return;
+			}
+
+			deleteTemplates(filenames);
+		}
+
+		function deleteTemplates(filenames) {
+			fetch('/api/templates/delete', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ filenames: filenames })
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					if (data.deleted_files.length > 0) {
+						showAlert(`Successfully deleted ${data.deleted_files.length} template(s)`, 'success');
+					}
+					if (data.failed_files.length > 0) {
+						const failedList = data.failed_files.map(f => `${f.filename}: ${f.error}`).join(', ');
+						showAlert(`Failed to delete some files: ${failedList}`, 'warning');
+					}
+					loadTemplates();
+					selectedTemplates.clear();
+					updateSelection();
+				} else {
+					showAlert(`Error deleting templates: ${data.error}`, 'danger');
+				}
+			})
+			.catch(error => {
+				showAlert(`Error deleting templates: ${error.message}`, 'danger');
+			});
+		}
+
+		function downloadTemplate(filename) {
+			const link = document.createElement('a');
+			link.href = `/api/templates/download/${filename}`;
+			link.download = filename;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
+
+		function showAlert(message, type) {
+			const alertClasses = {
+				'success': 'alert-success',
+				'danger': 'alert-danger',
+				'warning': 'alert-warning',
+				'info': 'alert-info'
+			};
+
+			const alertDiv = document.createElement('div');
+			alertDiv.className = `alert ${alertClasses[type]} alert-dismissible fade show`;
+			alertDiv.innerHTML = `
+				${message}
+				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			`;
+
+			alertArea.appendChild(alertDiv);
+
+			// Auto-remove after 5 seconds
+			setTimeout(() => {
+				if (alertDiv.parentNode) {
+					alertDiv.remove();
+				}
+			}, 5000);
+		}
+
+		// Initialize
+		document.addEventListener('DOMContentLoaded', function() {
+			loadTemplates();
+		});
+	</script>
+</body>
+</html>
+				

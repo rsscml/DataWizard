@@ -1,0 +1,46 @@
+{
+  "databases": [
+    {
+      "id": "production_db",
+      "name": "Production Analytics",
+      "description": "Main production database for analytics and reporting",
+      "server_hostname": "adb-1234567890123456.78.azuredatabricks.net",
+      "http_path": "/sql/1.0/warehouses/abc123def456",
+      "catalog": "production_catalog",
+      "schema": "analytics_schema",
+      "azure_tenant_id": "your-azure-tenant-id-here",
+      "azure_client_id": "your-azure-client-id-here",
+      "azure_client_secret": "your-azure-client-secret-here",
+      "enabled": true,
+      "tags": ["production", "analytics"]
+    },
+    {
+      "id": "staging_db",
+      "name": "Staging Environment", 
+      "description": "Staging database for testing and development",
+      "server_hostname": "adb-9876543210987654.21.azuredatabricks.net",
+      "http_path": "/sql/1.0/warehouses/xyz789uvw012",
+      "catalog": "staging_catalog",
+      "schema": "test_schema",
+      "azure_tenant_id": "your-azure-tenant-id-here",
+      "azure_client_id": "your-staging-client-id-here",
+      "azure_client_secret": "your-staging-client-secret-here",
+      "enabled": true,
+      "tags": ["staging", "development"]
+    },
+    {
+      "id": "sales_db",
+      "name": "Sales Data Warehouse",
+      "description": "Sales and customer data for business intelligence",
+      "server_hostname": "adb-5555666677778888.99.azuredatabricks.net",
+      "http_path": "/sql/1.0/warehouses/sales123warehouse",
+      "catalog": "sales_dwh",
+      "schema": "fact_tables",
+      "azure_tenant_id": "your-azure-tenant-id-here",
+      "azure_client_id": "your-sales-client-id-here",
+      "azure_client_secret": "your-sales-client-secret-here",
+      "enabled": true,
+      "tags": ["sales", "business_intelligence", "crm"]
+    }
+  ]
+}

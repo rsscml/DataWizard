@@ -1,0 +1,66 @@
+{
+  "id": "B&W_Marketing",
+  "name": "B&W_Marketing_KPIS",
+  "description": "To be used for analysis of Marketing Metrics for Beauty & Wellbeing Category",
+  "version": "2.0",
+  "domain": "Marketing",
+  "business_context": "The following are the key Measures (KPIs) used by the Beauty & Wellbeing Marketing Team for analysis:\n \nTDP SHARE (Total Distribution Point Share)\nDescription:\nTDP is sum of the Weighted distribution of the individual items, at Brand level​\nTDP provides insight on \"depth of range availability\"\nShare of TDP across brands gives us \"share of availability\"​\nShare of TDP has strong correlation with Value Share​\n\nFormula: (Total distribution points of the brand / total Distribution points of the category) * 100\n\nData Type:\nPercentage\n\nBETTER QUALITY\nDescription: Proportion of survey respondents who associate a brand with the statement \"better quality than others\"\nData Type:\nPercentage\n\nSOS/SOM\nDescription: SoS/SoM is a media metric that calculates the relationship between Share of Spend (SoS) and Share of Market (SoM).\nSoS is the media investment by a brand in a product segment as a percentage of the total media spend in that segment. \nSoM is the equivalent for sales value rather than spend.\nSoS should not be confused with SoV (Share of Voice), which is an impressions-based metric. SoS is used because it offers a comprehensive coverage of channels, whereas SoV is limited to TV advertising.\n\nFormula:\n1> SOS = (Media Spend for Reported Product / Total Media Spend for Reported Market) * 100\n2> SOM = (Sales Value for Reported Product / Total Media Spend for Reported Market) * 100 \n\nData Type:\nIndex\n\nSALIENCE INDEX\nDescription: \nKey metric used to assess a brand's mental availability - how easily and quickly it comes to mind for consumers in a buying context\n\nData Type:\nIndex\n\nTBCA\nDescription:\nTotal Brand Communication Awareness measures the percentage of respondents who recall seeing, hearing, or reading anything about a brand via paid media channels\n\nData Type:\nPercentage\n\nTBCA - TV\nDescription:\nTV awareness is reported as a percentage of brand-aware respondents who recall exposure via TV\nData Type:\nPercentage\n\nDBCA\nDescription:\nTV awareness is reported as a percentage of brand-aware respondents who recall exposure via Digital\n\nData Type:\nPercentage\n\nATTRACTIVE PACK\nDescription:\nConsumer association of brands on 'having more attractive packaging other than brands\n\nData Type:\nPercentage\n\nBRAND POWER SCORE\nDescription:\nBrand Power is a predictive measure of volume share. It reflects how strongly consumers are attracted to a brand and how easily it comes to mind when making a purchase decision\n\nData Type:\nPercentage\n\nBRAND POWER RANKING\nDescription:\nRanking of brand power score compared to other brands in the category in the specific market\n\nData Type:\nRanking\n\nMEANINGFULNESS INDEX\nDescription:\nConsumers feel an affinity for the brand or think it meets their needs\n\nData Type:\nIndex\n\nDIFFERENCE INDEX\nDescription:\nFeels different from other brands or sets the trends for the category\n\nData Type:\nIndex\n\nSLP - Absolute\nDescription:\nSustainable Living Purpose: consumer association of brands on making a positive difference to society.\nEnvironmentally Responsible/recycled plastics: Consumer association, of brands on 'behave responsibly towards the environment' & 'packing that can be recycled or reused or refilled'\n\nData Type:\nPercentage\n\nAPI\nDescription:\nAverage Price Index. Compares the average price per volume of a brand with the market average. Index score of 100 means the brand's average price is the same as market average price.\n\nData Type: \nIndex\n\nPREMIUM INDEX\nDescription:\nDerived metric based on index of a brand's value / worth\n\nData Type:\nIndex\n\nPERCEIVED PRICE\nDescription:\nConsumer Perception of relative prices between brands / brand's products. Index of perceived price vs category average\n\nData Type:\nIndex\n\nValue Share or MSVAL\nDescription:\nIndicates how much money consumers are spending on a brand compared to competitors.\nA high MSVAL suggests strong pricing power, premium positioning, or high consumer demand.\nFormula: (Brand Sales Value / Total Market Sales Value) * 100\n\nData Type: \nPercentage\n\nVolume Share or MSVOL\nDescription:\nReflects the quantity of product sold, regardless of price. \nA high MSVOL indicates strong distribution, affordability, or mass-market appeal.\nFormula: (Brand Sales Volume / Total Market Sales Volume) * 100\n\nData Type: \nPercentage\n\nRELATIVE PENETRATION\nDescription:\nIs a brand’s penetration relative to the category’s penetration.\nFormula - (Penetration of Brand / Penetration of Category) * 100\n\nData Type:\nPercentage\n\nPENETRATION\nDescription:\nIs the % of households that have purchased the brand at least once during a given period.\nFormula: (Total Number of Brand Buyers / Number of Households) * 100\n\nData Type:\nPercentage\n\nMarket Share by Price Tier\nDescription:\nMarket share for each brand in the specific range of API\n1. Masstige: API 200+\n2. Super Premium: API 160 - 200\n3. Premium: API 120 - 160\n4. Upper Mass: API 100 - 120\n5. Lower Mass: API 80 - 100\n6. Economy: API <80\n\nData Type:\nPercentage\n\nCOMMON ANALYSES IN MARKETING:\n\n1. 6P analysis: The 6P analysis in a marketing context refers to a framework that utilizes six key elements to develop a comprehensive marketing strategy: Product, Price, Pack, Proposition, Promotion, and Place. There's one additional set of KPIs we use 'Outcome'.\n\nThe KPIs relevant to 6P Analysis are: \nProduct: BETTER QUALITY\nPack: ATTRACTIVE PACK\nPrice: PERCEIVED PRICE, API, PREMIUM INDEX\nProposition: BRAND POWER SCORE, BRAND POWER RANKING, MEANINGFULNESS INDEX, DIFFERENCE INDEX, SLP - Absolute\nPromotion: TBCA, DBCA, TBCA - TV, SOS/SOM, SALIENCE INDEX\nPlace: TDP SHARE\nOutcome: MSVAL or Value Share, MSVOL or Volume Share, RELATIVE PENETRATION, PENETRATION\n\n\n2. 6Ps 1-Page analysis: It shows in a tabular format Quarterly, MAT, MAT - 1 & vsPY Comparison for various KPIs included in 6P Analysis.\n\n3. 6P Analysis Comparison between Brands: Similar to above but the comparison is between two or more Brands\n\n4. Correlational Analysis: The various KPIs described above may have correlation among them. Correlation Analysis helps uncover dependencies among various KPIs\n\n5. Distribution Analysis: This involves analysis of TDP Share, Value Share, Volume Share & SOS/SOM KPIs over time\n ",
+  "columns": [
+    {
+      "name": "Country",
+      "business_name": "Country",
+      "description": "",
+      "data_type": "text",
+      "business_type": "dimension"
+    },
+    {
+      "name": "Category",
+      "business_name": "Category",
+      "description": "",
+      "data_type": "text",
+      "business_type": "dimension"
+    },
+    {
+      "name": "Manufacturer",
+      "business_name": "Manufacturer",
+      "description": "",
+      "data_type": "text",
+      "business_type": "dimension"
+    },
+    {
+      "name": "Brand",
+      "business_name": "Brand",
+      "description": "Also referred to as 'Brand Position Name' ",
+      "data_type": "text",
+      "business_type": "dimension"
+    },
+    {
+      "name": "Measure",
+      "business_name": "Measure",
+      "description": "This column contains various KPIs. The data is usually wide formatted where the time columns show the values for a corresponding KPI value in Measure Column",
+      "data_type": "text",
+      "business_type": "dimension"
+    }
+  ],
+  "metrics": [],
+  "visualizations": [],
+  "common_analyses": [],
+  "detection_rules": {
+    "required_columns": [
+      "Country",
+      "Category",
+      "Manufacturer",
+      "Brand",
+      "Measure"
+    ],
+    "column_patterns": [
+      "Country",
+      "Category",
+      "Manufacturer",
+      "Brand Position Name",
+      "Measure"
+    ]
+  },
+  "created_date": "2025-07-25T05:36:34.525Z",
+  "last_modified": "2025-07-25T05:36:34.525Z"
+}

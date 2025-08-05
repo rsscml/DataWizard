@@ -1,0 +1,4560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Analytics Platform - AI-Powered Database Analysis</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Plotly.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8f2ff 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            color: #73706E;
+        }
+        
+        .main-container {
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 25%, #ffffff 50%, #f8f9fa 75%, #e8f2ff 100%);
+            color: #73706E;
+            height: 100vh;
+            overflow: hidden;
+            padding: 15px;
+            border-right: 3px solid #005EEF;
+            box-shadow: 2px 0 15px rgba(31, 54, 199, 0.08);
+            transition: margin-left 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar.collapsed {
+            flex: 0 0 0 !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            overflow: hidden;
+            padding: 0 !important;
+            border: none !important;
+            transition: all 0.3s ease;
+        }
+
+        .logo-container {
+            position: fixed;
+            bottom: 5px;
+            right: 25px;
+            z-index: 10002;
+        }
+        
+        /* Mode Toggle Button */
+        .mode-toggle-container {
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .mode-toggle-btn {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.2);
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .mode-toggle-btn:hover {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(31, 54, 199, 0.3);
+        }
+
+        /* ENHANCED: Context Manager Button Styling */
+        .context-manager-btn {
+            background: linear-gradient(135deg, #73706E 0%, #5a5855 100%) !important;
+            color: white;
+            border: 1px solid rgba(115, 112, 110, 0.3);
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(115, 112, 110, 0.15);
+            transition: all 0.3s ease;
+            font-size: 11px;
+            width: auto;
+            display: inline-block;
+            margin-bottom: 8px;
+            margin-right: 8px;
+        }
+
+        .context-manager-btn:hover {
+            background: linear-gradient(135deg, #5a5855 0%, #4a4743 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(115, 112, 110, 0.2);
+        }
+
+        .context-manager-btn i {
+            margin-right: 6px;
+            font-size: 10px;
+        }
+
+        /* Database Connection Area */
+        .database-connect-area {
+            border: 3px dashed #005EEF;
+            border-radius: 15px;
+            padding: 40px 30px;
+            text-align: center;
+            margin: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #f0f4ff 100%);
+            transition: all 0.3s ease;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(31, 54, 199, 0.08);
+        }
+        
+        .database-connect-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 80%, rgba(31, 54, 199, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(0, 94, 239, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        .connect-content {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+        }
+        
+        .database-icon {
+            font-size: 4rem;
+            color: #005EEF;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+        
+        .database-connect-area:hover .database-icon {
+            color: #1F36C7;
+            transform: translateY(-5px) scale(1.1);
+            opacity: 1;
+        }
+        
+        .connect-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #73706E;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .connect-subtitle {
+            font-size: 1.1rem;
+            color: #73706E;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        /* Database Configuration Selector */
+        .database-selector {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 6px 20px rgba(31, 54, 199, 0.08);
+            border: 1px solid rgba(0, 94, 239, 0.2);
+        }
+        
+        .form-select {
+            border: 2px solid #005EEF;
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .form-select:focus {
+            border-color: #1F36C7;
+            box-shadow: 0 0 0 0.2rem rgba(31, 54, 199, 0.25);
+        }
+        
+        .connect-button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 20px rgba(31, 54, 199, 0.12);
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            margin: 10px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .connect-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(31, 54, 199, 0.2);
+        }
+        
+        .connect-button:disabled {
+            background: #73706E;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ENHANCED: Context Status Display */
+        .context-status {
+            margin-top: 15px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            border: 1px solid;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .context-status.enhanced {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+            color: #00B190;
+            border-color: #00B190;
+        }
+
+        .context-status.basic {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border-color: #ffc107;
+        }
+
+        .context-status.none {
+            background: linear-gradient(135deg, #f8d7da 0%, #f1c6c7 100%);
+            color: #721c24;
+            border-color: #dc3545;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .context-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .context-badge.enhanced {
+            background: #00B190;
+            color: white;
+        }
+
+        .context-badge.basic {
+            background: #ffc107;
+            color: #856404;
+        }
+
+        .context-badge.none {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Content area and spreadsheet styles */
+        .content-area {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            transition: margin-left 0.3s ease, margin-right 0.3s ease;
+        }
+        
+        .content-area.expanded {
+            margin-left: -25%;
+        }
+
+        /* Override Bootstrap grid when sidebar is collapsed */
+        .content-area.sidebar-collapsed {
+            flex: 1 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 15px !important;
+            transition: all 0.3s ease;
+        }
+
+        /* Force the main row to use flexbox */
+        .main-container .row {
+            display: flex !important;
+            transition: all 0.3s ease;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+
+        /* Ensure normal state works too */
+        .sidebar:not(.collapsed) {
+            flex: 0 0 25% !important;
+            width: 25% !important;
+            transition: all 0.3s ease;
+        }
+
+        .content-area:not(.sidebar-collapsed) {
+            flex: 0 0 75% !important;
+            width: 75% !important;
+            transition: all 0.3s ease;
+        }
+        
+        .spreadsheet-container {
+            flex: 1;
+            overflow: hidden;
+            background: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .spreadsheet-container.normal-mode {
+            margin: 10px;
+            border: 2px solid #005EEF;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(31, 54, 199, 0.08);
+        }
+        
+        .spreadsheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #73706E 0%, #5a5855 100%);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(115, 112, 110, 0.15);
+            z-index: 1000;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .spreadsheet-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+        
+        .spreadsheet-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Compact database info display */
+        .compact-database-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .database-name-display {
+            font-weight: bold;
+        }
+
+        .database-stats {
+            opacity: 0.8;
+        }
+
+        /* ENHANCED: Context indicator in header */
+        .context-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            margin-left: 8px;
+        }
+
+        .context-indicator.enhanced {
+            background: rgba(0, 177, 144, 0.2);
+            color: #00B190;
+            border: 1px solid rgba(0, 177, 144, 0.3);
+        }
+
+        .context-indicator.basic {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .context-indicator.none {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+        
+        .view-mode-toggle, .outputs-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .view-mode-toggle:hover, .outputs-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* View Toggle Styles */
+        .view-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .view-toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .view-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #005EEF;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .view-label {
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Outputs View Container */
+        .outputs-view-container {
+            flex: 1;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(31, 54, 199, 0.1);
+            margin: 10px;
+            display: none;
+            flex-direction: column;
+        }
+
+        .outputs-view-container.active {
+            display: flex;
+        }
+
+        .outputs-view-header {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 15px 15px 0 0;
+            flex-shrink: 0;
+        }
+
+        .outputs-view-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .outputs-view-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #73706E;
+            text-align: center;
+        }
+
+        .outputs-view-empty i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        /* Hide floating output cards when in outputs view */
+        .content-area.outputs-view-active .output-card {
+            display: none !important;
+        }
+
+        /* Hide the charts container entirely when in outputs view */
+        .outputs-view-active .charts-container {
+            display: none !important;
+        }
+
+        /* Stacked Output Cards */
+        .stacked-output-card {
+            background: white;
+            border: 2px solid #005EEF;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(31, 54, 199, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stacked-output-card:hover {
+            box-shadow: 0 12px 35px rgba(31, 54, 199, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .stacked-output-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .stacked-output-header {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stacked-output-content {
+            padding: 20px;
+            max-height: none;
+            overflow: visible;
+        }
+
+        .stacked-output-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .stacked-output-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .stacked-output-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .stacked-output-btn.danger {
+            background: rgba(255, 84, 79, 0.8);
+        }
+
+        .stacked-output-btn.danger:hover {
+            background: rgba(255, 84, 79, 0.9);
+        }
+
+        /* Ensure stacked charts have proper dimensions */
+        .stacked-output-content .embedded-chart {
+            min-height: 400px;
+        }
+
+        .stacked-output-content .chart-content {
+            min-height: 350px;
+        }
+
+        /* OnlyOffice editor container */
+        .onlyoffice-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #onlyoffice-editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            flex: 1;
+        }
+
+        /* Force OnlyOffice to fill expanded space */
+        .content-area.sidebar-collapsed .spreadsheet-container {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .content-area.sidebar-collapsed .onlyoffice-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+        }
+
+        .content-area.sidebar-collapsed #onlyoffice-editor {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Force OnlyOffice to recalculate on sidebar state changes */
+        .sidebar-collapsed .spreadsheet-container.normal-mode {
+            margin: 10px !important;
+            width: calc(100% - 20px) !important;
+        }
+
+        .editor-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 1001;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(31, 54, 199, 0.15);
+        }
+        
+        /* Fullscreen mode styles */
+        .fullscreen-mode {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+
+        .fullscreen-mode .onlyoffice-container {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Enhanced Chat Container - similar to index.html */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #005EEF;
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(31, 54, 199, 0.1);
+            margin-top: 15px;
+            min-height: 0;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 15px 15px 0 0;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.15);
+            flex-shrink: 0;
+        }
+
+        .chat-header-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        
+        /* Enhanced textarea styling for chat input - Modern rounded style with proper spacing */
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid #005EEF;
+            border-radius: 0 0 15px 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            flex-shrink: 0;
+        }
+
+        .chat-input-container {
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .chat-input-container textarea {
+            resize: vertical;
+            min-height: 70px;
+            max-height: 120px;
+            line-height: 1.4;
+            padding-right: 45px !important; /* Make room for send button */
+            border-radius: 20px;
+            border: 2px solid #005EEF;
+        }
+
+        .chat-input-container textarea:focus {
+            outline: none;
+            border-color: #1F36C7;
+            box-shadow: 0 0 0 3px rgba(31, 54, 199, 0.1);
+        }
+
+        .chat-send-btn {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            border: none;
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            box-shadow: 0 2px 8px rgba(31, 54, 199, 0.2);
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .chat-send-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.3);
+        }
+
+        .chat-send-btn:disabled {
+            background: #73706E;
+            transform: none;
+            box-shadow: 0 2px 4px rgba(115, 112, 110, 0.2);
+        }
+
+        .chat-send-btn i {
+            margin-left: 1px; /* Slight offset to center the paper plane icon */
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(31, 54, 199, 0.06);
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            text-align: right;
+            margin-left: 15%;
+        }
+        
+        .ai-message {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            color: #73706E;
+            margin-right: 15%;
+            border: 1px solid #005EEF;
+        }
+        
+        .system-message {
+            background: linear-gradient(135deg, #FFC000 0%, #ff9800 100%);
+            color: white;
+            text-align: center;
+            font-style: italic;
+            margin: 5px 0;
+        }
+
+        /* ENHANCED: Context-enhanced message styling */
+        .message.context-enhanced {
+            border-left: 4px solid #00B190;
+        }
+
+        .message.context-enhanced::before {
+            content: "🧠 Enhanced";
+            display: inline-block;
+            background: #00B190;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 8px;
+            margin-bottom: 4px;
+        }
+        
+        /* Outputs Sidebar */
+        .outputs-sidebar {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            color: #73706E;
+            height: 100vh;
+            overflow: hidden;
+            padding: 15px;
+            border-left: 3px solid #005EEF;
+            box-shadow: -2px 0 15px rgba(31, 54, 199, 0.08);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 350px;
+            z-index: 2000;
+            transform: translateX(100%);
+        }
+        
+        .outputs-sidebar.open {
+            transform: translateX(0);
+            box-shadow: -20px 0 50px rgba(31, 54, 199, 0.2);
+        }
+
+        /* Overlay when outputs sidebar is open */
+        .outputs-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(115, 112, 110, 0.3);
+            z-index: 1999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .outputs-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .outputs-header {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.15);
+            margin-bottom: 15px;
+        }
+        
+        .outputs-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .output-summary {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #005EEF;
+            box-shadow: 0 2px 8px rgba(0, 94, 239, 0.06);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .output-summary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 94, 239, 0.12);
+        }
+        
+        .output-summary.active {
+            border-left-color: #1F36C7;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%);
+        }
+        
+        .output-summary-title {
+            font-weight: bold;
+            font-size: 13px;
+            color: #73706E;
+            margin-bottom: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .output-summary-time {
+            font-size: 11px;
+            color: #73706E;
+            margin-bottom: 5px;
+            opacity: 0.7;
+        }
+        
+        .output-summary-type {
+            font-size: 10px;
+            padding: 2px 8px;
+            background: #005EEF;
+            color: white;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        /* Pulse animation for outputs toggle when sidebar is closed but has content */
+        .outputs-toggle.has-hidden-outputs {
+            animation: pulse-blue 2s infinite;
+        }
+
+        @keyframes pulse-blue {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 94, 239, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 94, 239, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 94, 239, 0);
+            }
+        }
+        
+        /* Enhanced Output Cards */
+        .output-card {
+            position: fixed;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 12px 40px rgba(31, 54, 199, 0.18);
+            z-index: 1500;
+            min-width: 400px;
+            max-width: 900px;
+            min-height: 300px;
+            max-height: 85vh;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .output-card.active {
+            border-color: #005EEF;
+            box-shadow: 0 15px 50px rgba(0, 94, 239, 0.25);
+        }
+        
+        .output-card.minimized {
+            height: 60px !important;
+            min-height: 60px !important;
+            width: 300px !important;
+        }
+        
+        .output-card.minimized .output-card-content {
+            display: none;
+        }
+        
+        .output-card-header {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            cursor: move;
+            font-size: 14px;
+        }
+        
+        .output-card-title {
+            flex: 1;
+            margin-right: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-decoration: ellipsis;
+        }
+        
+        .output-card-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .output-card-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 30px;
+        }
+        
+        .output-card-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .output-card-btn.danger {
+            background: rgba(255, 84, 79, 0.8);
+        }
+        
+        .output-card-btn.danger:hover {
+            background: rgba(255, 84, 79, 0.9);
+        }
+        
+        .output-card-content {
+            padding: 20px;
+            overflow: auto;
+            height: calc(100% - 60px);
+            background: white;
+        }
+        
+        /* Table styles */
+        .table-container {
+            position: relative;
+            margin: 10px 0;
+        }
+        
+        .table-info {
+            background: linear-gradient(135deg, #e8f2ff 0%, #f0f4ff 100%);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #73706E;
+            margin-bottom: 10px;
+            border-left: 4px solid #005EEF;
+        }
+        
+        .output-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 14px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.08);
+        }
+        
+        .output-table th {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 12px;
+            border: none;
+            font-weight: bold;
+            text-align: left;
+        }
+        
+        .output-table td {
+            padding: 10px 12px;
+            border: 1px solid #e8f2ff;
+            background: white;
+            color: #73706E;
+        }
+        
+        .output-table tr:nth-child(even) td {
+            background: #f8f9fa;
+        }
+        
+        .output-table tr:hover td {
+            background: #e8f2ff;
+        }
+        
+        .output-single-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #73706E;
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.08);
+        }
+        
+        .output-code-block {
+            background: linear-gradient(135deg, #73706E 0%, #5a5855 100%);
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 15px 0;
+            font-size: 13px;
+            overflow-x: auto;
+            box-shadow: 0 4px 12px rgba(115, 112, 110, 0.15);
+        }
+        
+        /* Embedded chart styles */
+        .embedded-chart {
+            margin: 15px 0;
+            border: 1px solid #005EEF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.08);
+        }
+        
+        .chart-header {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .chart-content {
+            background: white;
+            padding: 10px;
+        }
+
+        /* Insights section styles */
+        .insights-section {
+            animation: slideInInsights 0.3s ease;
+        }
+
+        @keyframes slideInInsights {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .insights-header {
+            box-shadow: 0 2px 8px rgba(0, 94, 239, 0.08);
+        }
+
+        .commentary-section {
+            box-shadow: 0 2px 8px rgba(0, 94, 239, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .commentary-section:hover {
+            box-shadow: 0 4px 12px rgba(0, 94, 239, 0.1);
+        }
+
+        .insights-list {
+            box-shadow: 0 2px 8px rgba(255, 105, 180, 0.08);
+            transition: all 0.2s ease;
+        }
+
+        .insights-list:hover {
+            box-shadow: 0 4px 12px rgba(255, 105, 180, 0.12);
+        }
+
+        .insights-list ul li {
+            position: relative;
+        }
+
+        .insights-list ul li::marker {
+            color: #FF69B4;
+            font-weight: bold;
+        }
+
+        /* Combined output styles */
+        .combined-output {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .output-section {
+            border: 1px solid #005EEF;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(31, 54, 199, 0.05);
+        }
+        
+        .output-section-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+            padding: 10px 15px;
+            font-weight: bold;
+            color: #73706E;
+            border-bottom: 1px solid #005EEF;
+        }
+        
+        .output-section-content {
+            padding: 15px;
+            background: white;
+        }
+        
+        /* Copy Menu */
+        .copy-menu {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(31, 54, 199, 0.15);
+            padding: 8px 0;
+            z-index: 2000;
+            min-width: 150px;
+            border: 1px solid #005EEF;
+        }
+        
+        .copy-menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #73706E;
+            transition: all 0.2s ease;
+        }
+        
+        .copy-menu-item:hover {
+            background: #e8f2ff;
+            color: #005EEF;
+        }
+        
+        .copy-menu-item i {
+            margin-right: 8px;
+            width: 15px;
+        }
+        
+        /* Copy notification */
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #00B190 0%, #00d4aa 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            z-index: 10001;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 177, 144, 0.15);
+        }
+        
+        .copy-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Database Info Panel */
+        .database-info {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+            border: 1px solid #00B190;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin: 10px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0, 177, 144, 0.08);
+            flex-shrink: 0;
+            color: #73706E;
+        }
+        
+        .database-info.connected {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+            border-color: #00B190;
+        }
+        
+        .database-info.disconnected {
+            background: linear-gradient(135deg, #ffe8e8 0%, #f8d7da 100%);
+            border-color: #FF544F;
+        }
+        
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.2);
+        }
+        
+        .status-connected {
+            background: linear-gradient(135deg, #00B190 0%, #00d4aa 100%);
+            box-shadow: 0 0 12px rgba(0, 177, 144, 0.4);
+        }
+        
+        .status-disconnected {
+            background: linear-gradient(135deg, #FF544F 0%, #ff3c36 100%);
+            box-shadow: 0 0 12px rgba(255, 84, 79, 0.4);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #005EEF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 20px;
+            transition: all 0.3s ease;
+            font-family: Arial, sans-serif;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(31, 54, 199, 0.15);
+        }
+        
+        .btn-outline-light {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .btn-outline-danger {
+            border-color: #FF544F;
+            color: #FF544F;
+        }
+        
+        .btn-outline-danger:hover {
+            background: #FF544F;
+            color: white;
+        }
+        
+        /* SQL Query Display */
+        .sql-query-display {
+            background: linear-gradient(135deg, #73706E 0%, #5a5855 100%);
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 10px 0;
+            font-size: 12px;
+            overflow-x: auto;
+            box-shadow: 0 4px 12px rgba(115, 112, 110, 0.15);
+        }
+        
+        /* Resize handle for output cards */
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            cursor: se-resize;
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            clip-path: polygon(100% 0%, 0% 100%, 100% 100%);
+        }
+        
+        /* Auto-positioning animation */
+        @keyframes slideInCard {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .output-card.new {
+            animation: slideInCard 0.3s ease;
+        }
+
+        /* Sidebar toggle button */
+        .sidebar-toggle {
+            position: fixed;
+            top: 20px;
+            left: 10px;
+            z-index: 10000;
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(31, 54, 199, 0.2);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-20px);
+        }
+
+        .sidebar-toggle.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
+
+        .sidebar-toggle:hover {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+            transform: scale(1.1);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                z-index: 9998;
+                width: 280px;
+                margin-left: -280px;
+                transition: margin-left 0.3s ease;
+            }
+            
+            .sidebar.show {
+                margin-left: 0;
+            }
+            
+            .content-area {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+            
+            .mode-toggle-container {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .mode-toggle-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+
+            .spreadsheet-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .spreadsheet-header-left {
+                justify-content: center;
+            }
+
+            .spreadsheet-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .compact-database-info {
+                justify-content: center;
+            }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+        }
+
+        /* Step Progress Indicators */
+        .step-progress {
+            background: linear-gradient(135deg, #e8f2ff 0%, #f0f4ff 100%) !important;
+            border-left: 4px solid #005EEF !important;
+            box-shadow: 0 2px 8px rgba(31, 54, 199, 0.08) !important;
+            animation: stepProgressPulse 2s ease-in-out;
+        }
+
+        .step-progress strong {
+            color: #1F36C7;
+        }
+
+        .step-progress em {
+            color: #73706E;
+            font-size: 0.9em;
+        }
+
+        @keyframes stepProgressPulse {
+            0% {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            50% {
+                opacity: 0.7;
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Two-step process completion message */
+        .two-step-complete {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%) !important;
+            border-left: 4px solid #00B190 !important;
+            box-shadow: 0 4px 12px rgba(0, 177, 144, 0.12) !important;
+        }
+
+        .two-step-complete strong {
+            color: #00B190;
+        }
+
+        /* Enhanced SQL query display for two-step process */
+        .sql-query-display {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 10px 0;
+            font-size: 13px;
+            overflow-x: auto;
+            box-shadow: 0 4px 12px rgba(44, 62, 80, 0.15);
+            border: 1px solid #005EEF;
+            position: relative;
+        }
+
+        .sql-query-display::before {
+            content: "SQL";
+            position: absolute;
+            top: 8px;
+            right: 15px;
+            background: #005EEF;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* Step-specific message styling */
+        .message.ai-message[data-step="1"] {
+            border-left-color: #1F36C7;
+        }
+
+        .message.ai-message[data-step="2"] {
+            border-left-color: #FF69B4;
+        }
+
+        /* Loading animation for two-step process */
+        .two-step-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .two-step-loading .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #005EEF;
+            animation: stepDotPulse 1.5s ease-in-out infinite;
+        }
+
+        .two-step-loading .step-dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .two-step-loading .step-dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes stepDotPulse {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Enhanced message styling for two-step results */
+        .step-result-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border: 2px solid #005EEF;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.08);
+        }
+
+        .step-result-summary h4 {
+            color: #1F36C7;
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+        }
+
+        .step-result-summary ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .step-result-summary li {
+            margin: 4px 0;
+            color: #73706E;
+        }
+
+        /* Improved error styling for two-step process */
+        .two-step-error {
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%) !important;
+            border-left: 4px solid #FF544F !important;
+            box-shadow: 0 4px 12px rgba(255, 84, 79, 0.12) !important;
+        }
+
+        .two-step-error strong {
+            color: #FF544F;
+        }
+
+        /* Step badges */
+        .step-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 8px;
+            box-shadow: 0 2px 6px rgba(31, 54, 199, 0.2);
+        }
+
+        .step-badge.step-1 {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+        }
+
+        .step-badge.step-2 {
+            background: linear-gradient(135deg, #FF69B4 0%, #FF1493 100%);
+        }
+
+        .step-badge.completed {
+            background: linear-gradient(135deg, #00B190 0%, #00d4aa 100%);
+        }
+
+        .step-badge.failed {
+            background: linear-gradient(135deg, #FF544F 0%, #ff3c36 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="/static/images/PerfCockpit.svg" style="width: 8em; height: 8em;" alt="Logo">
+    </div>
+    
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle" title="Show Sidebar">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+    
+    <div class="container-fluid main-container">
+        <div class="row h-100">
+            <!-- Left Sidebar - AI Assistant -->
+            <div class="col-md-3 sidebar" id="sidebar">
+                <div style="flex-shrink: 0; margin-bottom: 10px;">
+                    <h3 style="background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: bold; margin-bottom: 5px; font-size: 1.75rem;">
+                        <i class="fas fa-database" style="color: #005EEF;"></i> Data Wizard
+                    </h3>
+                    <p style="color: #73706E; font-size: 0.85rem; margin: 0; opacity: 0.8; font-style: italic;">
+                        AI Powered Structured & Relational Data Analysis
+                    </p>
+                    <!-- Mode Toggle Button -->
+                    <div class="mode-toggle-container">
+                        <button class="mode-toggle-btn" id="fileUploadModeBtn" onclick="switchToFileMode()">
+                            <i class="fas fa-file-upload"></i> File Upload Mode
+                        </button>
+                        <!-- ENHANCED: Context Manager Button -->
+                        <button class="context-manager-btn" id="contextManagerBtn" onclick="openContextManager()">
+                            <i class="fas fa-cogs"></i> Manage Context
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Connection Status -->
+                <div class="mb-3" style="flex-shrink: 0;">
+                    <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+                    <small id="statusText">No database connected</small>
+                    <!-- ENHANCED: Context indicator -->
+                    <span class="context-indicator none" id="contextIndicator" style="display: none;">
+                        <i class="fas fa-circle"></i> No Context
+                    </span>
+                </div>
+                
+                <!-- Chat Container -->
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <span><i class="fas fa-comments"></i> Chat with Your Database</span>
+                        <div class="chat-header-controls">
+                            <button class="btn btn-sm btn-outline-light" id="collapseSidebar" title="Collapse Sidebar">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" id="clearChat" title="Clear Chat">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ai-message">
+                            <strong>AI:</strong> You are in Database Mode! Connect to a database to start your analysis.
+                            <br><small>💡 <em>Ask questions like "Show me the top 10 customers by revenue" or "What's the average order value by month?"</em></small>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="chat-input-container">
+                            <textarea class="form-control" id="queryInput"
+                                placeholder="Ask about your data... (e.g., 'Show top 10 products by sales')" disabled></textarea>
+                            <button class="btn btn-primary chat-send-btn" type="button" id="sendQuery" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="col-md-9 content-area" id="contentArea">
+                <!-- Database Connection Area -->
+                <div id="databaseConnectArea" class="database-connect-area">
+                    <div class="connect-content">
+                        <i class="fas fa-database database-icon"></i>
+                        <h2 class="connect-title">Connect To Your Database</h2>
+                        <p class="connect-subtitle">Select one of the pre-configured databases</p>
+                        
+                        <!-- Database Configuration Selector -->
+                        <div class="database-selector">
+                            <h5><i class="fas fa-server" style="color: #005EEF;"></i> Database Configuration</h5>
+                            <select class="form-select" id="databaseSelect">
+                                <option value="">Loading configurations...</option>
+                            </select>
+                            <div id="configDetails" class="mt-3" style="font-size: 12px; color: #73706E;"></div>
+
+                            <!-- ENHANCED: Context Status Display -->
+                            <div id="contextStatus" class="context-status hidden">
+                                <div id="contextStatusContent"></div>
+                            </div>
+                            
+                            <!-- Connection Controls -->
+                            <div class="mt-3">
+                                <button class="connect-button" id="testConnectionBtn" disabled>
+                                    <i class="fas fa-plug"></i> Test Connection
+                                </button>
+                                <button class="connect-button" id="connectDatabaseBtn" disabled>
+                                    <i class="fas fa-database"></i> Connect & Analyze
+                                </button>
+                            </div>
+                            
+                            <div id="connectionStatus" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Database Information -->
+                <div id="databaseInfo" class="database-info hidden">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><i class="fas fa-database"></i> <span id="databaseName"></span></strong>
+                            <span class="ms-3">📊 <span id="tableCount"></span> tables in <span id="catalogSchema"></span></span>
+                            <!-- ENHANCED: Context status in database info -->
+                            <span class="context-indicator" id="databaseInfoContextIndicator" style="display: none;">
+                                <i class="fas fa-circle"></i> <span id="databaseInfoContextText">No Context</span>
+                            </span>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" id="disconnectDatabase">
+                            <i class="fas fa-unlink"></i> Disconnect
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Spreadsheet Container -->
+                <div id="spreadsheetContainer" class="spreadsheet-container hidden">
+                    <div class="spreadsheet-header">
+                        <div class="spreadsheet-header-left">
+                            <span><i class="fas fa-table"></i> <span id="currentViewLabel">Query Results</span></span>
+                            <!-- Database info display - compact version -->
+                            <span id="compactDatabaseInfo" class="compact-database-info hidden">
+                                <span class="database-name-display" id="compactDatabaseName"></span>
+                                <span class="database-stats" id="compactDatabaseStats"></span>
+                                <!-- ENHANCED: Context indicator in header -->
+                                <span class="context-indicator" id="headerContextIndicator" style="display: none;">
+                                    <i class="fas fa-circle"></i> <span id="headerContextText">No Context</span>
+                                </span>
+                            </span>
+                        </div>
+                        <div class="spreadsheet-controls">
+                            <!-- View Toggle -->
+                            <div class="view-toggle-container">
+                                <span class="view-label">Spreadsheet</span>
+                                <label class="view-toggle-switch">
+                                    <input type="checkbox" id="viewToggle" onchange="toggleView()">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="view-label">Outputs</span>
+                            </div>
+
+                            <button class="outputs-toggle" id="outputsToggle" title="Toggle Outputs Panel">
+                                <i class="fas fa-chart-bar"></i> Outputs (<span id="outputCount">0</span>)
+                            </button>
+                            <button class="view-mode-toggle" id="viewModeToggle" title="Toggle Full Screen">
+                                <i class="fas fa-expand"></i> Full Screen
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" id="downloadExcel">
+                                <i class="fas fa-download"></i>
+                                <span>Download</span>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" id="disconnectDatabaseHeader" title="Disconnect Database" style="display: none;">
+                                <i class="fas fa-unlink"></i>
+                                <span>Disconnect</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Spreadsheet View -->
+                    <div class="onlyoffice-container" id="onlyofficeContainer">
+                        <div class="editor-loading" id="editorLoading">
+                            <div class="loading"></div>
+                            <div>Loading OnlyOffice Editor...</div>
+                        </div>
+                        <div id="onlyoffice-editor"></div>
+                    </div>
+
+                    <!-- Outputs View Container -->
+                    <div class="outputs-view-container" id="outputsViewContainer">
+                        <div class="outputs-view-header">
+                            <span><i class="fas fa-chart-line"></i> Analysis Results</span>
+                            <div>
+                                <button class="btn btn-outline-light btn-sm" onclick="clearAllStackedOutputs()" title="Clear All Outputs">
+                                    <i class="fas fa-trash"></i> Clear All  
+                                </button>
+                            </div>
+                        </div>
+                        <div class="outputs-view-content" id="outputsViewContent">
+                            <div class="outputs-view-empty" id="outputsViewEmpty">
+                                <i class="fas fa-chart-line"></i>
+                                <h4>No Analysis Outputs Yet</h4>
+                                <p><small>Your database query results will appear here.</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outputs Sidebar -->
+            <div class="outputs-sidebar" id="outputsSidebar">
+                <div class="outputs-header">
+                    <span><i class="fas fa-chart-bar"></i> Analysis Outputs</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light" id="clearAllOutputs" title="Clear All">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" id="minimizeAllOutputs" title="Hide Panel">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" id="closeOutputsSidebar" title="Close Panel">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="outputs-list" id="outputsList">
+                    <div style="text-align: center; color: #73706E; padding: 40px 20px;">
+                        <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>No analysis outputs yet</p>
+                        <p><small>Start asking questions about your data!</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outputs Overlay -->
+    <div id="outputsOverlay" class="outputs-overlay"></div>
+    
+    <!-- Copy Notification -->
+    <div id="copyNotification" class="copy-notification">
+        <i class="fas fa-check"></i> Copied to clipboard!
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let currentDatabaseConfig = null;
+        let onlyOfficeEditor = null;
+        let documentKey = null;
+        let documentUrl = null;
+        let isFullScreen = false;
+        let editorReady = false;
+        let ONLYOFFICE_SERVER_URL = 'http://localhost:8080';
+        
+        // Output card variables
+        let outputCounter = 0;
+        let activeOutputs = new Map();
+        let lastOutputPosition = { x: 100, y: 100 };
+        let outputsSidebarOpen = false;
+
+        // View Management Variables
+        let currentView = 'spreadsheet'; // 'spreadsheet' or 'outputs'
+        let stackedOutputs = new Map(); // Store stacked outputs separately
+
+        // ENHANCED: Context management variables
+        let currentContextStatus = 'none'; // 'none', 'basic', 'enhanced'
+        let currentContextInfo = null;
+        
+        // DOM Elements
+        const databaseConnectArea = document.getElementById('databaseConnectArea');
+        const databaseSelect = document.getElementById('databaseSelect');
+        const configDetails = document.getElementById('configDetails');
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        const connectDatabaseBtn = document.getElementById('connectDatabaseBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const databaseInfo = document.getElementById('databaseInfo');
+        const databaseName = document.getElementById('databaseName');
+        const tableCount = document.getElementById('tableCount');
+        const catalogSchema = document.getElementById('catalogSchema');
+        const disconnectDatabase = document.getElementById('disconnectDatabase');
+        const spreadsheetContainer = document.getElementById('spreadsheetContainer');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const queryInput = document.getElementById('queryInput');
+        const sendQuery = document.getElementById('sendQuery');
+        const chatMessages = document.getElementById('chatMessages');
+        const clearChat = document.getElementById('clearChat');
+        const downloadExcel = document.getElementById('downloadExcel');
+        const editorLoading = document.getElementById('editorLoading');
+        const viewModeToggle = document.getElementById('viewModeToggle');
+        const copyNotification = document.getElementById('copyNotification');
+        const outputsOverlay = document.getElementById('outputsOverlay');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const contentArea = document.getElementById('contentArea');
+
+        // ENHANCED: Context-related DOM elements
+        const contextIndicator = document.getElementById('contextIndicator');
+        const contextStatus = document.getElementById('contextStatus');
+        const contextStatusContent = document.getElementById('contextStatusContent');
+        const databaseInfoContextIndicator = document.getElementById('databaseInfoContextIndicator');
+        const databaseInfoContextText = document.getElementById('databaseInfoContextText');
+        const headerContextIndicator = document.getElementById('headerContextIndicator');
+        const headerContextText = document.getElementById('headerContextText');
+
+        // New elements for enhanced functionality
+        const compactDatabaseInfo = document.getElementById('compactDatabaseInfo');
+        const compactDatabaseName = document.getElementById('compactDatabaseName');
+        const compactDatabaseStats = document.getElementById('compactDatabaseStats');
+        const disconnectDatabaseHeader = document.getElementById('disconnectDatabaseHeader');
+        
+        // Outputs sidebar elements
+        const outputsSidebar = document.getElementById('outputsSidebar');
+        const outputsToggle = document.getElementById('outputsToggle');
+        const outputsList = document.getElementById('outputsList');
+        const outputCount = document.getElementById('outputCount');
+        const clearAllOutputs = document.getElementById('clearAllOutputs');
+        const minimizeAllOutputs = document.getElementById('minimizeAllOutputs');
+        const closeOutputsSidebar = document.getElementById('closeOutputsSidebar');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOnlyOfficeConfig();
+            loadDatabaseConfigurations();
+            // Ensure we start in spreadsheet view
+            currentView = 'spreadsheet';
+            updateViewDependentControls();
+        });
+        
+        // Event Listeners
+        databaseSelect.addEventListener('change', handleDatabaseSelection);
+        testConnectionBtn.addEventListener('click', testDatabaseConnection);
+        connectDatabaseBtn.addEventListener('click', connectToDatabase);
+        disconnectDatabase.addEventListener('click', disconnectFromDatabase);
+        disconnectDatabaseHeader.addEventListener('click', disconnectFromDatabase);
+        sendQuery.addEventListener('click', sendDatabaseQuery);
+        
+        // Auto-resize textarea and handle Enter key
+        queryInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // Modified Enter key handling for textarea
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendDatabaseQuery();
+            }
+        });
+        
+        clearChat.addEventListener('click', clearChatMessages);
+        downloadExcel.addEventListener('click', downloadSpreadsheet);
+        viewModeToggle.addEventListener('click', toggleFullScreen);
+        outputsToggle.addEventListener('click', toggleOutputsSidebar);
+        clearAllOutputs.addEventListener('click', clearAllOutputCards);
+        minimizeAllOutputs.addEventListener('click', toggleOutputsSidebar);
+        closeOutputsSidebar.addEventListener('click', hideOutputsSidebar);
+        outputsOverlay.addEventListener('click', (e) => {
+            if (e.target === outputsOverlay) {
+                hideOutputsSidebar();
+            }
+        });
+        document.getElementById('collapseSidebar').addEventListener('click', collapseSidebar);
+        sidebarToggle.addEventListener('click', showSidebar);
+        
+        // Click outside to close copy menus
+        document.addEventListener('click', (e) => {
+            const copyMenus = document.querySelectorAll('.copy-menu');
+            copyMenus.forEach(menu => {
+                if (!menu.contains(e.target) && !e.target.closest('.copy-btn')) {
+                    menu.remove();
+                }
+            });
+        });
+        
+        function switchToFileMode() {
+            window.location.href = '/';
+        }
+
+        // ENHANCED: Function to open Database Context Manager
+        function openContextManager() {
+            window.open('/database-context-manager', '_blank');
+        }
+
+        // ENHANCED: Function to update context indicators
+        function updateContextIndicators(contextInfo = null) {
+            const indicators = [contextIndicator, databaseInfoContextIndicator, headerContextIndicator];
+            const textElements = [null, databaseInfoContextText, headerContextText];
+
+            let status = 'none';
+            let text = 'No Context';
+            let displayStyle = 'none';
+
+            if (contextInfo && contextInfo.available) {
+                if (contextInfo.enhanced) {
+                    status = 'enhanced';
+                    text = 'Enhanced';
+                    displayStyle = 'inline-flex';
+                } else {
+                    status = 'basic';
+                    text = 'Basic';
+                    displayStyle = 'inline-flex';
+                }
+            }
+
+            // Update all indicators
+            indicators.forEach((indicator, index) => {
+                if (indicator) {
+                    indicator.className = `context-indicator ${status}`;
+                    indicator.style.display = displayStyle;
+
+                    if (textElements[index]) {
+                        textElements[index].textContent = text;
+                    }
+                }
+            });
+
+            currentContextStatus = status;
+            currentContextInfo = contextInfo;
+        }
+
+        // ENHANCED: Function to display context status in connection area
+        function displayContextStatus(contextInfo) {
+            if (!contextInfo) {
+                contextStatus.classList.add('hidden');
+                return;
+            }
+
+            let statusClass = 'none';
+            let statusText = '';
+            let statusIcon = 'fas fa-times-circle';
+            let contextDetails = '';
+
+            if (contextInfo.available) {
+                const summary = contextInfo.summary;
+
+                // Build detailed context information
+                const contextItems = [];
+                if (summary.has_database_description) contextItems.push('Database description');
+                if (summary.has_global_instructions) contextItems.push('Global instructions');
+                if (summary.glossary_terms_count > 0) contextItems.push(`${summary.glossary_terms_count} business terms`);
+                if (summary.kpi_count > 0) contextItems.push(`${summary.kpi_count} KPI definitions`);
+                if (summary.table_metadata_count > 0) contextItems.push(`${summary.table_metadata_count} enhanced tables`);
+                if (summary.hierarchy_count > 0) contextItems.push(`${summary.hierarchy_count} hierarchies`);
+
+                contextDetails = contextItems.length > 0 ? `<br><small>📋 Includes: ${contextItems.join(', ')}</small>` : '';
+
+                if (contextInfo.enhanced) {
+                    statusClass = 'enhanced';
+                    statusText = `Enhanced Context Available <span class="context-badge enhanced">ENHANCED</span><br>
+                                 <small>✓ Comprehensive business context configured for optimal query results</small>${contextDetails}`;
+                    statusIcon = 'fas fa-check-circle';
+                } else {
+                    statusClass = 'basic';
+                    statusText = `Basic Context Available <span class="context-badge basic">BASIC</span><br>
+                                 <small>⚠ Partial context configured - consider expanding for better results</small>${contextDetails}`;
+                    statusIcon = 'fas fa-exclamation-circle';
+                }
+            } else {
+                statusClass = 'none';
+                statusText = `No Supplemental Context <span class="context-badge none">NONE</span><br>
+                             <small>💡 Click "Manage Context" to add business knowledge for better query results</small>`;
+                statusIcon = 'fas fa-info-circle';
+            }
+
+            contextStatusContent.innerHTML = `<i class="${statusIcon}"></i> ${statusText}`;
+            contextStatus.className = `context-status ${statusClass}`;
+            contextStatus.classList.remove('hidden');
+        }
+
+        function loadOnlyOfficeConfig() {
+            fetch('/config')
+                .then(response => response.json())
+                .then(config => {
+                    ONLYOFFICE_SERVER_URL = config.onlyoffice_server_url;
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = `${ONLYOFFICE_SERVER_URL}/web-apps/apps/api/documents/api.js`;
+                    script.onerror = function() {
+                        console.error('Failed to load OnlyOffice API script');
+                    };
+                    document.head.appendChild(script);
+                })
+                .catch(error => {
+                    console.error('Failed to load configuration:', error);
+                });
+        }
+        
+        function loadDatabaseConfigurations() {
+            fetch('/api/database/configs')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        populateDatabaseSelect(data.configs);
+                    } else {
+                        addMessage('ai', `❌ Error loading database configurations: ${data.error}`, true);
+                        databaseSelect.innerHTML = '<option value="">No configurations available</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading database configurations:', error);
+                    addMessage('ai', `❌ Error loading database configurations: ${error.message}`, true);
+                    databaseSelect.innerHTML = '<option value="">Error loading configurations</option>';
+                });
+        }
+        
+        function populateDatabaseSelect(configs) {
+            databaseSelect.innerHTML = '<option value="">Select a database configuration...</option>';
+
+            if (configs.length === 0) {
+                databaseSelect.innerHTML += '<option value="">No configurations available</option>';
+                return;
+            }
+
+            configs.forEach(config => {
+                try {
+                    const option = document.createElement('option');
+                    option.value = config.id;
+
+                    // ENHANCED: Improved context badge logic with null checks
+                    let contextBadge = '';
+                    let contextTooltip = '';
+
+                    if (config.has_supplemental_context && config.context_summary) {
+                        const summary = config.context_summary;
+
+                        // Check for comprehensive context with null safety
+                        const hasDescription = summary.has_database_description || false;
+                        const hasGlobalInstructions = summary.has_global_instructions || false;
+                        const hasGlossary = (summary.glossary_terms_count || 0) > 0;
+                        const hasKPIs = (summary.kpi_count || 0) > 0;
+                        const hasTableMetadata = (summary.table_metadata_count || 0) > 0;
+                        const hasHierarchies = (summary.hierarchy_count || 0) > 0;
+
+                        const contextScore = [hasDescription, hasGlobalInstructions, hasGlossary, hasKPIs, hasTableMetadata, hasHierarchies].filter(Boolean).length;
+
+                        if (contextScore >= 4) {
+                            contextBadge = ' 🧠'; // Comprehensive context
+                            contextTooltip = 'Comprehensive context available';
+                        } else if (contextScore >= 2) {
+                            contextBadge = ' ⚡'; // Good context
+                            contextTooltip = 'Good context available';
+                        } else {
+                            contextBadge = ' ⚠️'; // Basic context
+                            contextTooltip = 'Basic context available';
+                        }
+                    } else {
+                        contextBadge = ' ❌'; // No context
+                        contextTooltip = 'No supplemental context';
+                    }
+
+                    option.textContent = `${config.name} (${config.catalog}.${config.schema})${contextBadge}`;
+                    option.title = contextTooltip;
+                    option.setAttribute('data-config', JSON.stringify(config));
+                    databaseSelect.appendChild(option);
+                } catch (error) {
+                    console.error('Error creating option for config:', config.id, error);
+                }
+            });
+        }
+
+        // function to check detailed context status
+        async function checkDetailedContextStatus(configId) {
+            try {
+                const response = await fetch(`/api/database/context_status/${configId}`);
+                if (response.ok) {
+                    const contextStatus = await response.json();
+                    return contextStatus;
+                }
+                return null;
+            } catch (error) {
+                console.warn('Failed to get detailed context status:', error);
+                return null;
+            }
+        }
+        
+        async function handleDatabaseSelection() {
+            const selectedOption = databaseSelect.options[databaseSelect.selectedIndex];
+            const configId = databaseSelect.value;
+
+            if (!configId) {
+                configDetails.innerHTML = '';
+                testConnectionBtn.disabled = true;
+                connectDatabaseBtn.disabled = true;
+                currentDatabaseConfig = null;
+                contextStatus.classList.add('hidden');
+                updateContextIndicators(null);
+                return;
+            }
+
+            const configData = JSON.parse(selectedOption.getAttribute('data-config'));
+            currentDatabaseConfig = configData;
+
+            // Show configuration details
+            configDetails.innerHTML = `
+                <div><strong>Server:</strong> ${configData.server_hostname}</div>
+                <div><strong>Catalog:</strong> ${configData.catalog}</div>
+                <div><strong>Schema:</strong> ${configData.schema}</div>
+                <div><strong>Description:</strong> ${configData.description}</div>
+            `;
+
+            try {
+                // Get detailed context status
+                const detailedContextStatus = await checkDetailedContextStatus(configId);
+
+                // Enhanced context info
+                const contextInfo = {
+                    available: configData.has_supplemental_context,
+                    enhanced: configData.has_supplemental_context &&
+                             configData.context_summary &&
+                             configData.context_summary.has_database_description &&
+                             configData.context_summary.glossary_terms_count > 0,
+                    summary: detailedContextStatus || configData.context_summary
+                };
+
+                displayContextStatus(contextInfo);
+                updateContextIndicators(contextInfo);
+            } catch (error) {
+                console.error('Error loading context status:', error);
+                // Fallback to basic context info
+                const contextInfo = {
+                    available: configData.has_supplemental_context,
+                    enhanced: false,
+                    summary: configData.context_summary || {}
+                };
+                displayContextStatus(contextInfo);
+                updateContextIndicators(contextInfo);
+            }
+
+            testConnectionBtn.disabled = false;
+            connectDatabaseBtn.disabled = false;
+            connectionStatus.innerHTML = '';
+        }
+
+        function testDatabaseConnection() {
+            if (!currentDatabaseConfig) return;
+            
+            testConnectionBtn.disabled = true;
+            testConnectionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            connectionStatus.innerHTML = '<div class="text-info"><i class="fas fa-spinner fa-spin"></i> Testing connection...</div>';
+            
+            fetch('/api/database/test_connection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    config_id: currentDatabaseConfig.id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let message = '<div class="text-success"><i class="fas fa-check"></i> Connection successful!</div>';
+
+                    // ENHANCED: Add context information to connection test result
+                    if (data.supplemental_context) {
+                        if (data.supplemental_context.available) {
+                            message += '<div class="text-info" style="margin-top: 8px;"><i class="fas fa-brain"></i> Supplemental context available - queries will be enhanced with business knowledge</div>';
+                        } else {
+                            message += '<div class="text-warning" style="margin-top: 8px;"><i class="fas fa-info-circle"></i> No supplemental context - consider adding business context for better results</div>';
+                        }
+                    }
+
+                    connectionStatus.innerHTML = message;
+                } else {
+                    connectionStatus.innerHTML = `<div class="text-danger"><i class="fas fa-times"></i> Connection failed: ${data.message}</div>`;
+                    addMessage('ai', `❌ Connection test failed: ${data.message}`, true);
+                }
+            })
+            .catch(error => {
+                console.error('Connection test error:', error);
+                connectionStatus.innerHTML = `<div class="text-danger"><i class="fas fa-times"></i> Connection error: ${error.message}</div>`;
+                addMessage('ai', `❌ Connection test error: ${error.message}`, true);
+            })
+            .finally(() => {
+                testConnectionBtn.disabled = false;
+                testConnectionBtn.innerHTML = '<i class="fas fa-plug"></i> Test Connection';
+            });
+        }
+        
+        function connectToDatabase() {
+            if (!currentDatabaseConfig) return;
+            
+            connectDatabaseBtn.disabled = true;
+            connectDatabaseBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+            
+            // Get schema information
+            fetch(`/api/database/schema_info?config_id=${currentDatabaseConfig.id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update UI for connected state
+                        databaseConnectArea.style.display = 'none';
+                        databaseInfo.classList.remove('hidden');
+                        databaseInfo.classList.add('connected');
+                        
+                        databaseName.textContent = currentDatabaseConfig.name;
+                        tableCount.textContent = data.table_count;
+                        catalogSchema.textContent = `${data.catalog}.${data.schema}`;
+                        
+                        // Update compact database info in header
+                        compactDatabaseName.textContent = currentDatabaseConfig.name;
+                        compactDatabaseStats.textContent = `📊 ${data.table_count} tables in ${data.catalog}.${data.schema}`;
+                        compactDatabaseInfo.classList.remove('hidden');
+                        disconnectDatabaseHeader.style.display = 'block';
+
+                        // Hide the old database info bar and mark as integrated
+                        databaseInfo.classList.add('hidden', 'header-integrated');
+                        
+                        statusIndicator.className = 'status-indicator status-connected';
+                        statusText.textContent = `Connected to ${currentDatabaseConfig.name}`;
+                        queryInput.disabled = false;
+                        sendQuery.disabled = false;
+
+                        // ENHANCED: Update context indicators and show enhanced connection message
+                        let contextMessage = '';
+                        if (data.supplemental_context && data.supplemental_context.available) {
+                            updateContextIndicators(data.supplemental_context);
+                            if (data.supplemental_context.enhanced) {
+                                contextMessage = ' Your queries will be enhanced with comprehensive business context!';
+                            } else {
+                                contextMessage = ' Some business context is available to improve your queries.';
+                            }
+                        } else {
+                            updateContextIndicators(null);
+                            contextMessage = ' Consider adding business context for more accurate query results.';
+                        }
+                        
+                        addMessage('ai', `Successfully connected to database: ${currentDatabaseConfig.name}! Found ${data.table_count} tables in ${data.catalog}.${data.schema}.${contextMessage}`);
+                        
+                    } else {
+                        addMessage('ai', `❌ Failed to connect to database: ${data.error}`, true);
+                    }
+                })
+                .catch(error => {
+                    console.error('Database connection error:', error);
+                    addMessage('ai', `❌ Database connection error: ${error.message}`, true);
+                })
+                .finally(() => {
+                    connectDatabaseBtn.disabled = false;
+                    connectDatabaseBtn.innerHTML = '<i class="fas fa-database"></i> Connect & Analyze';
+                });
+        }
+        
+        function disconnectFromDatabase() {
+            // Reset UI to disconnected state
+            databaseConnectArea.style.display = 'flex';
+            databaseInfo.classList.add('hidden');
+            databaseInfo.classList.remove('connected', 'header-integrated');
+            spreadsheetContainer.classList.add('hidden');
+
+            // Clean up OnlyOffice editor
+            cleanupOnlyOfficeEditor();
+            
+            // Hide compact database info and disconnect button in header
+            compactDatabaseInfo.classList.add('hidden');
+            disconnectDatabaseHeader.style.display = 'none';
+            
+            statusIndicator.className = 'status-indicator status-disconnected';
+            statusText.textContent = 'No database connected';
+            queryInput.disabled = true;
+            sendQuery.disabled = true;
+
+            // ENHANCED: Reset context indicators
+            updateContextIndicators(null);
+            contextStatus.classList.add('hidden');
+            
+            currentDatabaseConfig = null;
+            databaseSelect.value = '';
+            configDetails.innerHTML = '';
+            connectionStatus.innerHTML = '';
+            testConnectionBtn.disabled = true;
+            connectDatabaseBtn.disabled = true;
+            
+            // Clear all outputs
+            clearAllOutputCards();
+            
+            addMessage('ai', 'Disconnected from database. Select a configuration to reconnect.');
+            
+            // Reset session on server side
+            fetch('/reset_session', {method: 'POST'}).catch(e => console.log('Reset warning:', e));
+        }
+        
+        function sendDatabaseQuery() {
+            const question = queryInput.value.trim();
+            if (!question || !currentDatabaseConfig) return;
+
+            addMessage('user', question);
+            queryInput.value = '';
+            queryInput.style.height = 'auto';
+
+            // Show initial processing message
+            addMessage('ai', '🔄 Starting two-step processing...', false, true);
+
+
+            fetch('/api/database/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    config_id: currentDatabaseConfig.id
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                removeLastLoadingMessage();
+
+                // Validate response structure
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid response format from server');
+                }
+
+                if (data.success) {
+                    // Two-step process completed successfully
+                    handleTwoStepSuccess(data, question);
+                } else {
+                    // Handle error from specific step
+                    handleTwoStepError(data);
+                }
+            })
+            .catch(error => {
+                removeLastLoadingMessage();
+                console.error('Database query error:', error);
+
+                let errorMessage = 'Error processing query';
+
+                if (error.message.includes('HTTP 500')) {
+                    errorMessage = 'Server error during processing - please try again';
+                } else if (error.message.includes('HTTP 404')) {
+                    errorMessage = 'Database configuration not found - please reconnect';
+                } else if (error.message.includes('Network')) {
+                    errorMessage = 'Network error - please check your connection';
+                } else {
+                    errorMessage = `Error: ${error.message}`;
+                }
+
+                addMessage('ai', `❌ ${errorMessage}`, true);
+            });
+        }
+
+        function handleTwoStepSuccess(data, question) {
+            try {
+                // Display overall success message
+                //addMessage('ai', data.message || '✅ Two-step processing completed successfully!');
+
+                // STEP 1 RESULTS: SQL and Data Display
+                if (data.step1_result) {
+                    const step1 = data.step1_result;
+
+                    // Enhanced context information display
+                    let contextMessage = '';
+                    if (step1.context_enhanced) {
+                        contextMessage = `<br><small>🧠 <strong>Context Enhanced:</strong> ${step1.context_info}</small>`;
+                    }
+
+                    // Show SQL query with context info
+                    if (step1.sql_query) {
+                        addMessage('ai', `<strong>🔄 Step 1 - Generated SQL:</strong>${contextMessage}<div class="sql-query-display">${step1.sql_query}</div>`);
+                    }
+
+                    // Show detailed retry information if multiple attempts were made
+                    if (step1.attempts_made > 1) {
+                        const retryInfo = step1.retry_details || [];
+                        const successfulAttempt = retryInfo.find(attempt => attempt.success);
+                        const failedAttempts = retryInfo.filter(attempt => !attempt.success);
+
+                        let retryMessage = `<strong>📊 Query Generation:</strong> Succeeded after ${step1.attempts_made} attempts`;
+                        if (failedAttempts.length > 0) {
+                            retryMessage += `<br><small>Corrected issues: ${failedAttempts.map(a => a.error_type).join(', ')}</small>`;
+                        }
+                        if (step1.context_enhanced) {
+                            retryMessage += `<br><small>Business context helped resolve: ${failedAttempts.length} error(s)</small>`;
+                        }
+
+                        addMessage('ai', retryMessage);
+                    }
+
+                    // Show explanation
+                    //if (step1.explanation) {
+                    //    addMessage('ai', `<strong> SQL Explanation:</strong> ${step1.explanation}`);
+                    //}
+
+                    // Show data stats
+                    //addMessage('ai', `<strong> Data Retrieved:</strong> ${step1.rows_returned} rows × ${step1.columns.length} columns`);
+
+                    // Initialize OnlyOffice with the results
+                    if (step1.document_url && step1.document_key && step1.filename) {
+                        try {
+                            initializeOnlyOfficeEditor(step1.document_url, step1.document_key, step1.filename);
+                        } catch (editorError) {
+                            console.error('Error initializing OnlyOffice editor:', editorError);
+                            addMessage('ai', `⚠️ Data retrieved but spreadsheet viewer failed: ${editorError.message}`, true);
+                        }
+                    }
+                }
+
+
+                // STEP 2 RESULTS: Analysis Display
+                if (data.step2_result) {
+                    const step2 = data.step2_result;
+
+                    if (step2.success) {
+                        addMessage('ai', '<strong> Step 2 - Analysis:</strong> Analysis completed successfully!');
+
+                        // Create output card with analysis results
+                        try {
+                            const outputId = createOutputCard(step2, question);
+
+                            if (outputId) {
+                                //addMessage('ai', ' Analysis results displayed in output card below!');
+
+                                // Auto-open outputs sidebar if not open
+                                if (!outputsSidebarOpen) {
+                                    toggleOutputsSidebar();
+                                }
+                            } else {
+                                addMessage('ai', ' Analysis completed but could not display results properly');
+                            }
+
+                        } catch (displayError) {
+                            console.error('Error displaying analysis result:', displayError);
+                            addMessage('ai', ` Analysis completed but display error: ${displayError.message}`, true);
+                        }
+                    } else {
+                        // Step 2 failed but Step 1 succeeded
+                        const analysisError = step2.error || 'Unknown analysis error';
+                        addMessage('ai', `<strong> Step 2 - AI Analysis:</strong> Analysis failed: ${analysisError}`, true);
+                        addMessage('ai', '💡 <em>The data was successfully retrieved and is available in the spreadsheet above, but AI analysis encountered an issue.</em>');
+                    }
+                }
+
+                // Final summary
+                //addMessage('ai', '<strong>✅ Two-Step Process Complete!</strong><br>• Step 1: Fresh data fetched from database<br>• Step 2: AI analysis performed<br><em>You can now ask follow-up questions for a new analysis cycle.</em>');
+
+            } catch (error) {
+                console.error('Error handling two-step success:', error);
+                addMessage('ai', `⚠️ Processing completed but display error: ${error.message}`, true);
+            }
+        }
+
+        function handleTwoStepError(data) {
+            const step = data.step || 'unknown';
+            const error = data.error || 'Unknown error';
+
+            // Determine which step failed and show appropriate message
+            switch (step) {
+                case 'validation':
+                    addMessage('ai', `❌ <strong>Validation Error:</strong> ${error}`, true);
+                    break;
+
+                case 'configuration':
+                    addMessage('ai', `❌ <strong>Configuration Error:</strong> ${error}`, true);
+                    addMessage('ai', '💡 <em>Please check your database configuration and try reconnecting.</em>');
+                    break;
+
+                case 'step1_sql_execution':
+                    addMessage('ai', `❌ <strong>Step 1 Failed (Data Fetching):</strong> ${error}`, true);
+
+                    if (data.sql_query) {
+                        addMessage('ai', `<strong>Generated SQL:</strong><div class="sql-query-display">${data.sql_query}</div>`);
+                    }
+
+                    if (data.suggestions) {
+                        addMessage('ai', `<strong>💡 Suggestions:</strong><br>${data.suggestions}`);
+                    }
+
+                    addMessage('ai', '<em>Step 2 (Analysis) was not attempted because data fetching failed.</em>');
+                    break;
+
+                case 'system_error':
+                    addMessage('ai', `❌ <strong>System Error:</strong> ${error}`, true);
+                    addMessage('ai', '💡 <em>This appears to be a system issue. Please try refreshing the page.</em>');
+                    break;
+
+                default:
+                    addMessage('ai', `❌ <strong>Processing Error:</strong> ${error}`, true);
+                    break;
+            }
+        }
+
+        // Helper function to show step progress (optional enhancement)
+        function showStepProgress(stepNumber, message, isComplete = false) {
+            const progressId = `step-progress-${stepNumber}`;
+            let progressMsg = document.getElementById(progressId);
+
+            if (!progressMsg) {
+                progressMsg = document.createElement('div');
+                progressMsg.id = progressId;
+                progressMsg.className = 'message ai-message step-progress';
+                chatMessages.appendChild(progressMsg);
+            }
+
+            const icon = isComplete ? '✅' : '🔄';
+            const status = isComplete ? 'Completed' : 'In Progress';
+
+            progressMsg.innerHTML = `<strong>AI:</strong> ${icon} <strong>Step ${stepNumber}:</strong> ${message} - <em>${status}</em>`;
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            return progressMsg;
+        }
+
+        // Enhanced version with step-by-step progress (optional)
+        function sendDatabaseQueryWithProgress() {
+            const question = queryInput.value.trim();
+            if (!question || !currentDatabaseConfig) return;
+
+            addMessage('user', question);
+            queryInput.value = '';
+            queryInput.style.height = 'auto';
+
+            // Show step progress
+            const step1Progress = showStepProgress(1, 'Generating SQL and fetching data from database');
+            const step2Progress = showStepProgress(2, 'Analyzing data with AI agent');
+
+            fetch('/api/database/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    config_id: currentDatabaseConfig.id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update progress indicators
+                if (data.success) {
+                    showStepProgress(1, 'Generated SQL and fetched data from database', true);
+                    showStepProgress(2, 'Analyzed data with AI agent', true);
+
+                    // Handle success
+                    handleTwoStepSuccess(data, question);
+                } else {
+                    // Update progress based on where it failed
+                    if (data.step && data.step.includes('step1')) {
+                        showStepProgress(1, 'Failed to fetch data from database', true);
+                        // Remove step 2 progress since it wasn't attempted
+                        const step2Elem = document.getElementById('step-progress-2');
+                        if (step2Elem) step2Elem.remove();
+                    } else {
+                        showStepProgress(1, 'Fetched data from database', true);
+                        showStepProgress(2, 'Failed to analyze data', true);
+                    }
+
+                    handleTwoStepError(data);
+                }
+            })
+            .catch(error => {
+                // Remove progress indicators on error
+                document.querySelectorAll('.step-progress').forEach(elem => elem.remove());
+
+                console.error('Database query error:', error);
+                addMessage('ai', `❌ Error: ${error.message}`, true);
+            });
+        }
+
+
+        // Toggle between spreadsheet and outputs view
+        function toggleView() {
+            const viewToggle = document.getElementById('viewToggle');
+            const onlyofficeContainer = document.getElementById('onlyofficeContainer');
+            const outputsViewContainer = document.getElementById('outputsViewContainer');
+            const currentViewLabel = document.getElementById('currentViewLabel');
+            const contentArea = document.getElementById('contentArea');
+
+            if (viewToggle.checked) {
+                // Switch to outputs view
+                currentView = 'outputs';
+                onlyofficeContainer.style.display = 'none';
+                outputsViewContainer.classList.add('active');
+                currentViewLabel.textContent = 'Analysis Results';
+                contentArea.classList.add('outputs-view-active');
+
+                // Explicitly hide all floating output cards
+                hideAllFloatingCards();
+
+                // Update outputs view content
+                updateOutputsView();
+
+            } else {
+                // Switch to spreadsheet view
+                currentView = 'spreadsheet';
+                onlyofficeContainer.style.display = 'flex';
+                outputsViewContainer.classList.remove('active');
+                currentViewLabel.textContent = 'Query Results';
+                contentArea.classList.remove('outputs-view-active');
+
+                // Explicitly show all floating output cards
+                showAllFloatingCards();
+            }
+
+            // Update button states and visibility
+            updateViewDependentControls();
+        }
+
+        // Update controls based on current view
+        function updateViewDependentControls() {
+            const downloadBtn = document.getElementById('downloadExcel');
+            const fullScreenBtn = document.getElementById('viewModeToggle');
+
+            if (currentView === 'outputs') {
+                // Hide spreadsheet-specific controls  
+                fullScreenBtn.style.display = 'none';
+                // Keep download button as it can work for both views
+            } else {
+                // Show all controls for spreadsheet view
+                fullScreenBtn.style.display = 'block';
+            }
+        }
+
+        // Update the outputs view content
+        function updateOutputsView() {
+            const outputsViewContent = document.getElementById('outputsViewContent');
+            const outputsViewEmpty = document.getElementById('outputsViewEmpty');
+
+            // Clear existing content
+            outputsViewContent.innerHTML = '';
+
+            if (activeOutputs.size === 0) {
+                // Show empty state
+                outputsViewContent.appendChild(outputsViewEmpty);
+            } else {
+                // Create stacked cards for each output
+                const sortedOutputs = Array.from(activeOutputs.entries())
+                    .sort(([,a], [,b]) => new Date(b.timestamp) - new Date(a.timestamp)); // Most recent first
+
+                sortedOutputs.forEach(([outputId, output]) => {
+                    const stackedCard = createStackedOutputCard(outputId, output);
+                    outputsViewContent.appendChild(stackedCard);
+                });
+            }
+        }
+
+        // Create a stacked version of an output card
+        function createStackedOutputCard(outputId, output) {
+            const stackedCard = document.createElement('div');
+            stackedCard.className = 'stacked-output-card';
+            stackedCard.id = `stacked_${outputId}`;
+
+            const truncatedQuery = output.query.length > 80 ? output.query.substring(0, 80) + '...' : output.query;
+            const timestamp = new Date(output.timestamp).toLocaleString();
+
+            stackedCard.innerHTML = `
+                <div class="stacked-output-header">
+                    <div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">
+                            <i class="fas fa-chart-line"></i> ${truncatedQuery}
+                        </div>
+                        <div style="font-size: 12px; opacity: 0.8;">
+                            <i class="fas fa-clock"></i> ${timestamp}
+                        </div>
+                    </div>
+                    <div class="stacked-output-controls">
+                        <button class="stacked-output-btn" onclick="copyStackedOutput('${outputId}')" title="Copy">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="stacked-output-btn" onclick="expandStackedOutput('${outputId}')" title="View in Floating Card">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                        <button class="stacked-output-btn danger" onclick="removeStackedOutput('${outputId}')" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="stacked-output-content">
+                    ${formatOutputForDisplay(output.data)}
+                </div>
+            `;
+
+            // Ensure charts render properly in stacked view
+            setTimeout(() => {
+                const chartDiv = stackedCard.querySelector('[id^="chart_"]');
+                if (chartDiv && typeof Plotly !== 'undefined' && Plotly.Plots) {
+                    try {
+                        Plotly.Plots.resize(chartDiv);
+                    } catch (error) {
+                        console.log('Chart resize warning:', error);
+                    }
+                }
+            }, 500);
+
+            return stackedCard;
+        }
+
+        // Copy content from stacked output
+        function copyStackedOutput(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+
+            const content = JSON.stringify(output.data.result, null, 2);
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(content).then(() => {
+                    showCopyNotification();
+                });
+            } else {
+                fallbackCopy(content);
+            }
+        }
+
+        // Expand stacked output to floating card
+        function expandStackedOutput(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+
+            // Switch back to spreadsheet view
+            const viewToggle = document.getElementById('viewToggle');
+            viewToggle.checked = false;
+            toggleView();
+
+            // Focus the existing floating card
+            setTimeout(() => {
+                focusOutputCard(outputId);
+            }, 300);
+        }
+
+        // Remove output from stacked view
+        function removeStackedOutput(outputId) {
+            closeOutputCard(outputId);
+        }
+
+        // Clear all stacked outputs
+        function clearAllStackedOutputs() {
+            clearAllOutputCards();
+        }
+
+        // Hide all floating output cards
+        function hideAllFloatingCards() {
+            // Hide all output cards
+            document.querySelectorAll('.output-card').forEach(card => {
+                card.style.display = 'none';
+            });
+        }
+
+        // Show all floating output cards
+        function showAllFloatingCards() {
+            // Show all output cards
+            document.querySelectorAll('.output-card').forEach(card => {
+                card.style.display = 'block';
+            });
+        }
+        
+        // Output Card Functions (Enhanced from index.html)
+        function createOutputCard(data, query) {
+            outputCounter++;
+            const outputId = data.output_id || `output_${outputCounter}`;
+            
+            // Calculate position for new card
+            const position = calculateOutputPosition();
+            
+            // Create output card
+            const outputCard = document.createElement('div');
+            outputCard.className = 'output-card new';
+            outputCard.id = outputId;
+            outputCard.style.left = position.x + 'px';
+            outputCard.style.top = position.y + 'px';
+            outputCard.style.width = '700px';
+            outputCard.style.height = '500px';
+            
+            const truncatedQuery = query.length > 50 ? query.substring(0, 50) + '...' : query;
+            const timestamp = new Date(data.timestamp).toLocaleTimeString();
+            
+            outputCard.innerHTML = `
+                <div class="output-card-header">
+                    <div class="output-card-title">
+                        <i class="fas fa-chart-line"></i> ${truncatedQuery}
+                    </div>
+                    <div class="output-card-controls">
+                        <button class="output-card-btn copy-btn" onclick="showCopyMenu(event, '${outputId}')" title="Copy">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="output-card-btn" onclick="minimizeOutputCard('${outputId}')" title="Minimize">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="output-card-btn" onclick="maximizeOutputCard('${outputId}')" title="Maximize">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button class="output-card-btn danger" onclick="closeOutputCard('${outputId}')" title="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="output-card-content">
+                    ${formatOutputForDisplay(data)}
+                </div>
+                <div class="resize-handle" onmousedown="startResize(event, '${outputId}')"></div>
+            `;
+            
+            document.body.appendChild(outputCard);
+            
+            // Make draggable
+            enableOutputCardDrag(outputCard);
+            
+            // Add emergency recovery
+            addEmergencyRecovery(outputCard);
+            
+            // Store output data
+            activeOutputs.set(outputId, {
+                element: outputCard,
+                data: data,
+                query: query,
+                timestamp: data.timestamp,
+                minimized: false
+            });
+            
+            // Add to outputs list
+            addToOutputsList(outputId, query, timestamp);
+            
+            // Update counter
+            updateOutputCount();
+            
+            // Focus the card
+            focusOutputCard(outputId);
+            
+            // Remove 'new' class after animation
+            setTimeout(() => {
+                outputCard.classList.remove('new');
+            }, 300);
+
+            // IMPORTANT: Hide the card if we're currently in outputs view
+            if (currentView === 'outputs') {
+                outputCard.style.display = 'none';
+                updateOutputsView();
+            }
+            
+            return outputId;
+        }
+        
+        function calculateOutputPosition() {
+            const offset = 30;
+            const maxX = window.innerWidth - 700;
+            const maxY = window.innerHeight - 500;
+            
+            lastOutputPosition.x += offset;
+            lastOutputPosition.y += offset;
+            
+            if (lastOutputPosition.x > maxX) {
+                lastOutputPosition.x = 100;
+            }
+            if (lastOutputPosition.y > maxY) {
+                lastOutputPosition.y = 100;
+            }
+            
+            return { ...lastOutputPosition };
+        }
+        
+        function formatOutputForDisplay(data) {
+            let mainContent = '';
+
+            // Handle combined outputs (both data and chart)
+            if (data.plot_data && Object.keys(data.plot_data).length > 0 && data.result) {
+                mainContent = formatCombinedOutput(data);
+            }
+            // Handle chart-only outputs
+            else if (data.plot_data && Object.keys(data.plot_data).length > 0) {
+                mainContent = formatChartOutput(data.plot_data);
+            }
+            // Handle code with result
+            else if (data.code) {
+                mainContent = '<div class="output-code-block"><strong>Generated Code:</strong><br><pre>' + data.code + '</pre></div>';
+                if (data.result) {
+                    mainContent += formatResult(data.result);
+                }
+            }
+            // Handle result only
+            else if (data.result) {
+                mainContent = formatResult(data.result);
+            }
+            else {
+                mainContent = '<div class="output-single-value">Analysis completed successfully!</div>';
+            }
+
+            // Add commentary and insights section
+            const insightsSection = formatInsightsSection(data);
+
+            return mainContent + insightsSection;
+        }
+
+        function formatInsightsSection(data) {
+            const commentary = data.commentary || '';
+            const insights = data.insights || [];
+
+            // Only show insights section if we have commentary or insights
+            if (!commentary && (!insights || insights.length === 0)) {
+                return '';
+            }
+
+            let insightsHtml = `
+                <div class="insights-section" style="margin-top: 20px; border-top: 2px solid #005EEF; padding-top: 15px;">
+                    <div class="insights-header" style="background: linear-gradient(135deg, #e8f2ff 0%, #f0f4ff 100%); padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #005EEF;">
+                        <i class="fas fa-lightbulb" style="color: #005EEF; margin-right: 8px;"></i>
+                        <strong style="color: #73706E;">AI Insights</strong>
+                    </div>
+            `;
+
+            // Add commentary if available
+            if (commentary) {
+                insightsHtml += `
+                    <div class="commentary-section" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #005EEF; border-radius: 8px; padding: 12px 15px; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <i class="fas fa-comment-dots" style="color: #005EEF; margin-top: 2px; flex-shrink: 0;"></i>
+                            <div style="color: #73706E; line-height: 1.5; font-size: 14px;">
+                                ${commentary}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Add insights if available
+            if (insights && insights.length > 0) {
+                insightsHtml += `
+                    <div class="insights-list" style="background: linear-gradient(135deg, #fff5f8 0%, #ffe6f2 100%); border: 1px solid #FF69B4; border-radius: 8px; padding: 15px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <i class="fas fa-chart-line" style="color: #FF69B4; margin-right: 8px;"></i>
+                            <strong style="color: #73706E; font-size: 14px;">Key Findings</strong>
+                        </div>
+                        <ul style="margin: 0; padding-left: 20px; color: #73706E;">
+                `;
+
+                insights.forEach(insight => {
+                    insightsHtml += `<li style="margin-bottom: 8px; line-height: 1.4; font-size: 13px;">${insight}</li>`;
+                });
+
+                insightsHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            insightsHtml += '</div>';
+
+            return insightsHtml;
+        }
+
+        function formatCombinedOutput(data) {
+            const combinedId = `combined_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            let html = '<div class="combined-output">';
+
+            // Chart section - give it priority space
+            if (data.plot_data && Object.keys(data.plot_data).length > 0) {
+                html += `
+                    <div class="output-section">
+                        <div class="output-section-header">
+                            <i class="fas fa-chart-line"></i> Visualization
+                        </div>
+                        <div class="output-section-content">
+                            ${formatChartOutput(data.plot_data, combinedId + '_chart')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Data section
+            if (data.result) {
+                html += `
+                    <div class="output-section">
+                        <div class="output-section-header">
+                            <i class="fas fa-table"></i> Data Analysis Results
+                        </div>
+                        <div class="output-section-content">
+                            ${formatResult(data.result)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            return html;
+        }
+        
+        function formatChartOutput(plotData, chartId = null) {
+            const uniqueId = chartId || `chart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            const html = `
+                <div class="embedded-chart">
+                    <div class="chart-header">
+                        <i class="fas fa-chart-line"></i> Interactive Chart
+                    </div>
+                    <div class="chart-content" id="${uniqueId}"></div>
+                </div>
+            `;
+            
+            // Render the chart after the DOM is updated
+            setTimeout(() => {
+                const chartContainer = document.getElementById(uniqueId);
+                if (chartContainer) {
+                    try {
+                        Plotly.newPlot(chartContainer, plotData.data, plotData.layout, {responsive: true});
+                    } catch (error) {
+                        console.error('Error creating embedded chart:', error);
+                        chartContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #FF544F;">Error creating chart</div>';
+                    }
+                }
+            }, 100);
+            
+            return html;
+        }
+        
+        function formatResult(result) {
+            if (typeof result === 'string' || typeof result === 'number') {
+                return `<div class="output-single-value">${result}</div>`;
+            }
+            
+            if (Array.isArray(result)) {
+                if (result.length > 0 && typeof result[0] === 'object') {
+                    return formatArrayAsTable(result);
+                } else {
+                    return `<div class="output-single-value">${result.join(', ')}</div>`;
+                }
+            }
+            
+            if (typeof result === 'object' && result !== null) {
+                if (isTabularData(result)) {
+                    return formatObjectAsTable(result);
+                } else {
+                    return formatObjectAsKeyValue(result);
+                }
+            }
+            
+            return `<div class="output-single-value">${JSON.stringify(result)}</div>`;
+        }
+        
+        function isTabularData(obj) {
+            const keys = Object.keys(obj);
+            if (keys.length === 0) return false;
+            
+            const firstValue = obj[keys[0]];
+            if (!Array.isArray(firstValue)) return false;
+            
+            const expectedLength = firstValue.length;
+            return keys.every(key => Array.isArray(obj[key]) && obj[key].length === expectedLength);
+        }
+        
+        function formatArrayAsTable(data) {
+            if (data.length === 0) return '<div class="output-single-value">No data</div>';
+            
+            const headers = Object.keys(data[0]);
+            let html = '<table class="output-table"><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            // Limit to first 100 rows for performance
+            data.slice(0, 100).forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const value = row[header] !== null && row[header] !== undefined ? row[header] : '';
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            
+            if (data.length > 100) {
+                html += `<div class="table-info">Showing first 100 of ${data.length} rows</div>`;
+            }
+            
+            return html;
+        }
+        
+        function formatObjectAsTable(data) {
+            const keys = Object.keys(data);
+            const length = data[keys[0]].length;
+            
+            // Convert object format to array format
+            const arrayData = [];
+            for (let i = 0; i < Math.min(length, 100); i++) { // Limit to 100 rows
+                const row = {};
+                keys.forEach(key => {
+                    row[key] = data[key][i] !== null && data[key][i] !== undefined ? data[key][i] : '';
+                });
+                arrayData.push(row);
+            }
+            
+            let html = formatArrayAsTable(arrayData);
+            
+            if (length > 100) {
+                html += `<div class="table-info">Showing first 100 of ${length} rows</div>`;
+            }
+            
+            return html;
+        }
+        
+        function formatObjectAsKeyValue(obj) {
+            let html = '<table class="output-table"><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>';
+            
+            for (const [key, value] of Object.entries(obj)) {
+                let displayValue = value;
+                if (typeof value === 'object' && value !== null) {
+                    displayValue = JSON.stringify(value, null, 2);
+                }
+                html += `<tr><td><strong>${key}</strong></td><td>${displayValue}</td></tr>`;
+            }
+            
+            html += '</tbody></table>';
+            return html;
+        }
+        
+        function addToOutputsList(outputId, query, timestamp) {
+            const outputSummary = document.createElement('div');
+            outputSummary.className = 'output-summary';
+            outputSummary.id = `summary_${outputId}`;
+            outputSummary.onclick = () => focusOutputCard(outputId);
+            
+            const time = new Date(timestamp).toLocaleTimeString();
+            const truncatedQuery = query.length > 60 ? query.substring(0, 60) + '...' : query;
+            
+            outputSummary.innerHTML = `
+                <div class="output-summary-title">${truncatedQuery}</div>
+                <div class="output-summary-time">${time}</div>
+                <div class="output-summary-type">Analysis</div>
+            `;
+            
+            // Remove "no outputs" message if it exists
+            const noOutputsMsg = outputsList.querySelector('div[style*="text-align: center"]');
+            if (noOutputsMsg) {
+                noOutputsMsg.remove();
+            }
+            
+            outputsList.insertBefore(outputSummary, outputsList.firstChild);
+        }
+        
+        function focusOutputCard(outputId) {
+            // Remove active class from all cards
+            document.querySelectorAll('.output-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            // Remove active class from all summaries
+            document.querySelectorAll('.output-summary').forEach(summary => {
+                summary.classList.remove('active');
+            });
+            
+            // Add active class to selected card and summary
+            const card = document.getElementById(outputId);
+            const summary = document.getElementById(`summary_${outputId}`);
+            
+            if (card) {
+                card.classList.add('active');
+                // Bring to front
+                card.style.zIndex = 1500 + activeOutputs.size;
+            }
+            
+            if (summary) {
+                summary.classList.add('active');
+            }
+        }
+        
+        function minimizeOutputCard(outputId) {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+            
+            const card = output.element;
+            const minimizeBtn = card.querySelector('[onclick*="minimizeOutputCard"]');
+            
+            if (output.minimized) {
+                // Restore
+                card.classList.remove('minimized');
+                output.minimized = false;
+                minimizeBtn.innerHTML = '<i class="fas fa-minus"></i>';
+                minimizeBtn.title = 'Minimize';
+            } else {
+                // Minimize
+                card.classList.add('minimized');
+                output.minimized = true;
+                minimizeBtn.innerHTML = '<i class="fas fa-plus"></i>';
+                minimizeBtn.title = 'Restore';
+            }
+        }
+        
+        function maximizeOutputCard(outputId) {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+            
+            const card = output.element;
+            const maximizeBtn = card.querySelector('[onclick*="maximizeOutputCard"]');
+            
+            const isMaximized = card.style.width === '90vw';
+            
+            if (isMaximized) {
+                // Restore
+                card.style.width = '700px';
+                card.style.height = '500px';
+                card.style.left = '100px';
+                card.style.top = '100px';
+                maximizeBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                maximizeBtn.title = 'Maximize';
+            } else {
+                // Maximize
+                card.style.width = '90vw';
+                card.style.height = '80vh';
+                card.style.left = '5vw';
+                card.style.top = '10vh';
+                maximizeBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                maximizeBtn.title = 'Restore';
+            }
+        }
+        
+        function closeOutputCard(outputId) {
+            // CURSOR CLEANUP
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+
+            // Clean up any stuck states before removing
+            const element = output.element;
+            element.classList.remove('resizing');
+            element.removeAttribute('data-resizing');
+            
+            // Remove card
+            output.element.remove();
+            
+            // Remove from outputs list
+            const summary = document.getElementById(`summary_${outputId}`);
+            if (summary) {
+                summary.remove();
+            }
+            
+            // Remove from active outputs
+            activeOutputs.delete(outputId);
+            
+            // Update counter
+            updateOutputCount();
+            
+            // Show "no outputs" message if no outputs left
+            if (activeOutputs.size === 0) {
+                outputsList.innerHTML = `
+                    <div style="text-align: center; color: #73706E; padding: 40px 20px;">
+                        <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>No analysis outputs yet</p>
+                        <p><small>Start asking questions about your data!</small></p>
+                    </div>
+                `;
+            }
+
+            // Update outputs view if we're currently viewing it
+            if (currentView === 'outputs') {
+                setTimeout(() => {
+                    updateOutputsView();
+                }, 100);
+            }
+        }
+        
+        function clearAllOutputCards() {
+            activeOutputs.forEach((output, outputId) => {
+                closeOutputCard(outputId);
+            });
+        }
+        
+        function updateOutputCount() {
+            const count = activeOutputs.size;
+
+            // Always show the toggle button if there are outputs
+            if (count > 0) {
+                outputsToggle.style.display = 'block';
+
+                if (outputsSidebarOpen) {
+                    outputsToggle.innerHTML = '<i class="fas fa-chart-bar"></i> Hide Outputs';
+                    outputsToggle.style.background = '';
+                    outputsToggle.style.color = '';
+                } else {
+                    outputsToggle.innerHTML = `<i class="fas fa-chart-bar"></i> Show Outputs (${count})`;
+                    outputsToggle.style.background = 'linear-gradient(135deg, #FF69B4 0%, #FF1493 100%)';
+                    outputsToggle.style.color = 'white';
+                }
+            } else {
+                // Hide toggle when no outputs
+                outputsToggle.style.display = 'none';
+            }
+
+            // Update the count span if it exists
+            const countSpan = document.getElementById('outputCount');
+            if (countSpan) {
+                countSpan.textContent = count;
+            }
+
+            // Update outputs view if we're currently viewing it
+            if (currentView === 'outputs') {
+                updateOutputsView();
+            }
+        }
+        
+        function toggleOutputsSidebar() {
+            outputsSidebarOpen = !outputsSidebarOpen;
+            const minimizeBtn = document.getElementById('minimizeAllOutputs');
+
+            if (outputsSidebarOpen) {
+                outputsSidebar.classList.add('open');
+                outputsOverlay.classList.add('active');
+                outputsToggle.classList.remove('has-hidden-outputs');
+                outputsToggle.innerHTML = '<i class="fas fa-chart-bar"></i> Hide Outputs';
+                outputsToggle.title = 'Hide outputs panel';
+
+                // Reset button styling to normal
+                outputsToggle.style.background = '';
+                outputsToggle.style.color = '';
+                outputsToggle.style.fontWeight = '';
+
+                // Update minimize button to show hide icon
+                if (minimizeBtn) {
+                    minimizeBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                    minimizeBtn.title = 'Hide Panel';
+                }
+            } else {
+                hideOutputsSidebar();
+            }
+        }
+        
+        function hideOutputsSidebar() {
+            outputsSidebarOpen = false;
+            outputsSidebar.classList.remove('open');
+            outputsOverlay.classList.remove('active');
+
+            // Update the main outputs toggle button to make it clear it can reopen the sidebar
+            if (activeOutputs.size > 0) {
+                outputsToggle.innerHTML = `<i class="fas fa-chart-bar"></i> Show Outputs (${activeOutputs.size})`;
+                outputsToggle.title = 'Click to show analysis outputs panel';
+                outputsToggle.classList.add('has-hidden-outputs');
+
+                // Make sure the button is visible and styled prominently
+                outputsToggle.style.display = 'block';
+                outputsToggle.style.background = 'linear-gradient(135deg, #FF69B4 0%, #FF1493 100%)';
+                outputsToggle.style.color = 'white';
+                outputsToggle.style.fontWeight = 'bold';
+            }
+
+            // Update minimize button (even though it's hidden, for when it reappears)
+            const minimizeBtn = document.getElementById('minimizeAllOutputs');
+            if (minimizeBtn) {
+                minimizeBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                minimizeBtn.title = 'Hide Panel';
+            }
+        }
+        
+        function showCopyMenu(event, outputId) {
+            event.stopPropagation();
+            
+            // Remove existing copy menus
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+            
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+            
+            const copyMenu = document.createElement('div');
+            copyMenu.className = 'copy-menu';
+            copyMenu.style.left = event.pageX + 'px';
+            copyMenu.style.top = event.pageY + 'px';
+            
+            // Check if output contains a chart/plot
+            const hasChart = output.data.plot_data && Object.keys(output.data.plot_data).length > 0;
+            
+            copyMenu.innerHTML = `
+                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'text')">
+                    <i class="fas fa-align-left"></i> Copy as Text
+                </div>
+                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'table')">
+                    <i class="fas fa-table"></i> Copy as Table
+                </div>
+                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'json')">
+                    <i class="fas fa-code"></i> Copy as JSON
+                </div>
+                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'csv')">
+                    <i class="fas fa-file-csv"></i> Copy as CSV
+                </div>
+                ${hasChart ? `<div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'plot')">
+                    <i class="fas fa-chart-line"></i> Copy Plot
+                </div>` : ''}
+            `;
+            
+            document.body.appendChild(copyMenu);
+            
+            // Position menu to stay within viewport
+            const rect = copyMenu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                copyMenu.style.left = (event.pageX - rect.width) + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                copyMenu.style.top = (event.pageY - rect.height) + 'px';
+            }
+        }
+        
+        function copyOutputContent(outputId, format) {
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+            
+            const content = output.element.querySelector('.output-card-content');
+            let copyText = '';
+            
+            try {
+                switch (format) {
+                    case 'text':
+                        // Get main content
+                        copyText = content.textContent || content.innerText || '';
+
+                        // Add insights if available
+                        const insightsSection = content.querySelector('.insights-section');
+                        if (insightsSection) {
+                            const commentary = insightsSection.querySelector('.commentary-section');
+                            const insights = insightsSection.querySelector('.insights-list');
+
+                            copyText += '\n\n--- AI INSIGHTS ---\n';
+
+                            if (commentary) {
+                                copyText += 'Commentary: ' + (commentary.textContent || commentary.innerText) + '\n\n';
+                            }
+
+                            if (insights) {
+                                copyText += 'Key Findings:\n' + (insights.textContent || insights.innerText);
+                            }
+                        }
+                        break;
+
+                    case 'table':
+                        const table = content.querySelector('.output-table');
+                        if (table) {
+                            copyText = tableToTSV(table);
+                        } else {
+                            copyText = content.textContent || content.innerText || '';
+                        }
+                        break;
+                        
+                    case 'json':
+                        try {
+                            if (output.data && output.data.result) {
+                                copyText = JSON.stringify(output.data.result, null, 2);
+                            } else {
+                                copyText = JSON.stringify(output.data, null, 2);
+                            }
+                        } catch (e) {
+                            copyText = content.textContent || content.innerText || '';
+                        }
+                        break;
+                        
+                    case 'csv':
+                        const csvTable = content.querySelector('.output-table');
+                        if (csvTable) {
+                            copyText = tableToCSV(csvTable);
+                        } else {
+                            copyText = content.textContent || content.innerText || '';
+                        }
+                        break;
+                        
+                    case 'plot':
+                        // Handle plot copying
+                        if (output.data.plot_data && Object.keys(output.data.plot_data).length > 0) {
+                            copyPlot(outputId, content);
+                            return; // Exit early as plot copying is handled differently
+                        } else {
+                            copyText = 'No plot data available';
+                        }
+                        break;
+                        
+                    default:
+                        copyText = content.textContent || content.innerText || '';
+                }
+                
+                // Enhanced copy functionality with better error handling
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(copyText).then(() => {
+                        showCopyNotification();
+                        document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+                    }).catch(err => {
+                        console.warn('Clipboard API failed, using fallback:', err);
+                        fallbackCopy(copyText);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    fallbackCopy(copyText);
+                }
+                
+            } catch (error) {
+                console.error('Error copying content:', error);
+                // Still try to copy something
+                fallbackCopy(content.textContent || content.innerText || 'Error copying content');
+            }
+        }
+        
+        function copyPlot(outputId, content) {
+            try {
+                console.log('Copy plot called for output:', outputId);
+                
+                // Find all possible chart containers
+                const chartContainers = [
+                    content.querySelector('[id^="chart_"]'),
+                    content.querySelector('.chart-content > div'),
+                    content.querySelector('.chart-content'),
+                    content.querySelector('[id*="chart"]')
+                ].filter(el => el !== null);
+                
+                console.log('Found chart containers:', chartContainers);
+                
+                if (chartContainers.length === 0) {
+                    console.warn('No chart container found for plot copying');
+                    // Try to get plot data directly from output
+                    const output = activeOutputs.get(outputId);
+                    if (output && output.data.plot_data) {
+                        const plotDataJson = JSON.stringify(output.data.plot_data, null, 2);
+                        fallbackCopy(plotDataJson);
+                        showCopyNotification('Plot data copied as JSON!');
+                    } else {
+                        fallbackCopy('No chart found to copy');
+                    }
+                    return;
+                }
+                
+                const chartContainer = chartContainers[0];
+                console.log('Using chart container:', chartContainer.id);
+                
+                // Check if Plotly is available and if the chart exists
+                if (typeof Plotly !== 'undefined' && Plotly.toImage) {
+                    // Wait a bit to ensure the chart is fully rendered
+                    setTimeout(() => {
+                        Plotly.toImage(chartContainer, {
+                            format: 'png',
+                            width: 1200,
+                            height: 800,
+                            scale: 2
+                        }).then(function(dataUrl) {
+                            console.log('Plot image generated successfully');
+                            
+                            // Try modern clipboard API first
+                            if (navigator.clipboard && navigator.clipboard.write) {
+                                // Convert data URL to blob
+                                fetch(dataUrl)
+                                    .then(res => res.blob())
+                                    .then(blob => {
+                                        const item = new ClipboardItem({ 'image/png': blob });
+                                        return navigator.clipboard.write([item]);
+                                    })
+                                    .then(() => {
+                                        showCopyNotification('Plot copied as image!');
+                                        document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+                                    })
+                                    .catch(err => {
+                                        console.warn('Modern clipboard failed, trying fallback:', err);
+                                        // Fallback: try to copy data URL as text
+                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(dataUrl).then(() => {
+                                                showCopyNotification('Plot data URL copied!');
+                                                document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+                                            }).catch(() => {
+                                                fallbackCopy(dataUrl);
+                                            });
+                                        } else {
+                                            fallbackCopy(dataUrl);
+                                        }
+                                    });
+                            } else {
+                                // Fallback for older browsers
+                                console.log('Using fallback copy method');
+                                fallbackCopy(dataUrl);
+                            }
+                            
+                        }).catch(function(error) {
+                            console.error('Error generating plot image:', error);
+                            // Fallback: copy plot data as JSON
+                            const output = activeOutputs.get(outputId);
+                            if (output && output.data.plot_data) {
+                                const plotDataJson = JSON.stringify(output.data.plot_data, null, 2);
+                                fallbackCopy(plotDataJson);
+                                showCopyNotification('Plot data copied as JSON!');
+                            } else {
+                                fallbackCopy('Error copying plot - no data available');
+                            }
+                        });
+                    }, 500); // Wait 500ms for chart to fully render
+                } else {
+                    console.warn('Plotly.toImage not available, falling back to JSON');
+                    // Fallback: copy plot data as JSON
+                    const output = activeOutputs.get(outputId);
+                    if (output && output.data.plot_data) {
+                        const plotDataJson = JSON.stringify(output.data.plot_data, null, 2);
+                        fallbackCopy(plotDataJson);
+                        showCopyNotification('Plot data copied as JSON!');
+                    } else {
+                        fallbackCopy('No plot data available');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error in copyPlot:', error);
+                const output = activeOutputs.get(outputId);
+                if (output && output.data.plot_data) {
+                    const plotDataJson = JSON.stringify(output.data.plot_data, null, 2);
+                    fallbackCopy(plotDataJson);
+                    showCopyNotification('Plot data copied as JSON (fallback)!');
+                } else {
+                    fallbackCopy('Error copying plot');
+                }
+            }
+        }
+        
+        function fallbackCopy(text) {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                const result = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                if (result) {
+                    showCopyNotification();
+                } else {
+                    console.error('Fallback copy failed');
+                    alert('Copy failed. Please select the text manually and copy with Ctrl+C');
+                }
+                
+                document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+            } catch (err) {
+                console.error('Fallback copy error:', err);
+                alert('Copy not supported in this browser. Please select text manually.');
+                document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+            }
+        }
+        
+        function tableToTSV(table) {
+            const rows = table.querySelectorAll('tr');
+            return Array.from(rows).map(row => {
+                const cells = row.querySelectorAll('th, td');
+                return Array.from(cells).map(cell => cell.textContent.trim()).join('\t');
+            }).join('\n');
+        }
+        
+        function tableToCSV(table) {
+            const rows = table.querySelectorAll('tr');
+            return Array.from(rows).map(row => {
+                const cells = row.querySelectorAll('th, td');
+                return Array.from(cells).map(cell => {
+                    const text = cell.textContent.trim();
+                    // Escape quotes and wrap in quotes if contains comma or quote
+                    if (text.includes(',') || text.includes('"')) {
+                        return `"${text.replace(/"/g, '""')}"`;
+                    }
+                    return text;
+                }).join(',');
+            }).join('\n');
+        }
+        
+        function enableOutputCardDrag(element) {
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+
+            const header = element.querySelector('.output-card-header');
+            if (!header) return;
+
+            function startDrag(e) {
+                    // Don't drag if clicking on buttons or if resizing
+                    if (e.target.closest('.output-card-btn') || element.classList.contains('resizing')) {
+                        return;
+                    }
+
+                    isDragging = true;
+                    const rect = element.getBoundingClientRect();
+                    dragOffset.x = e.clientX - rect.left;
+                    dragOffset.y = e.clientY - rect.top;
+
+                    header.style.cursor = 'grabbing';
+                    document.body.style.userSelect = 'none';
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Focus the card when starting to drag
+                    focusOutputCard(element.id);
+                }
+
+            function doDrag(e) {
+                if (!isDragging || element.classList.contains('resizing')) {
+                    return;
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+
+                const maxX = window.innerWidth - element.offsetWidth;
+                const maxY = window.innerHeight - element.offsetHeight;
+
+                element.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+                element.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+            }
+
+            function stopDrag(e) {
+                if (!isDragging) return;
+
+                isDragging = false;
+                header.style.cursor = 'move';
+                document.body.style.userSelect = '';
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Remove event listeners
+                document.removeEventListener('mousemove', doDrag, true);
+                document.removeEventListener('mouseup', stopDrag, true);
+            }
+
+            header.addEventListener('mousedown', (e) => {
+                startDrag(e);
+
+                // Use capture phase and add listeners only when needed
+                document.addEventListener('mousemove', doDrag, true);
+                document.addEventListener('mouseup', stopDrag, true);
+
+                // Safety timeout
+                setTimeout(() => {
+                    if (isDragging) {
+                        console.warn('Drag operation timed out, cleaning up');
+                        stopDrag(e);
+                    }
+                }, 30000);
+            });
+        }
+
+        // Emergency recovery function for stuck cards
+        function emergencyRecoverCard(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+
+            const element = output.element;
+
+            // Remove all problematic states
+            element.classList.remove('resizing');
+            element.removeAttribute('data-resizing');
+
+            // Reset styles
+            element.style.cursor = '';
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.documentElement.style.cursor = ''; // Also clean document cursor
+
+            // Reset header cursor
+            const header = element.querySelector('.output-card-header');
+            if (header) {
+                header.style.cursor = 'move';
+            }
+
+            console.log('Emergency recovery applied to card:', outputId);
+        }
+
+        // Add double-click emergency recovery to card headers
+        function addEmergencyRecovery(element) {
+            const header = element.querySelector('.output-card-header');
+            if (header) {
+                header.addEventListener('dblclick', (e) => {
+                    if (e.shiftKey) { // Shift + double-click for emergency recovery
+                        emergencyRecoverCard(element.id);
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                });
+            }
+        }
+
+        // Max card size
+        function getMaximumCardSize() {
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            return {
+                maxWidth: Math.max(800, viewportWidth * 0.95), // At least 800px or 95% of viewport
+                maxHeight: Math.max(600, viewportHeight * 0.9)  // At least 600px or 90% of viewport
+            };
+        }
+
+        function startResize(event, outputId) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const output = activeOutputs.get(outputId);
+            if (!output) return;
+
+            const element = output.element;
+            const startX = event.clientX;
+            const startY = event.clientY;
+            const startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
+            const startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
+
+            // Add resizing class instead of data attribute
+            element.classList.add('resizing');
+
+            // Store original cursor
+            const originalCursor = document.body.style.cursor;
+            document.body.style.cursor = 'se-resize';
+
+            let resizeTimeout;
+            let isResizing = true;
+
+            function doResize(e) {
+                if (!isResizing) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                // more generous resize constraints
+                const maxSizes = getMaximumCardSize();
+                const newWidth = Math.max(300, Math.min(startWidth + e.clientX - startX, maxSizes.maxWidth));
+                const newHeight = Math.max(200, Math.min(startHeight + e.clientY - startY, maxSizes.maxHeight));
+
+                element.style.width = newWidth + 'px';
+                element.style.height = newHeight + 'px';
+
+                // Replace the throttled Plotly resize section with:
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    const chartDiv = element.querySelector('.chart-content > div, [id^="chart_"]');
+                    if (chartDiv && typeof Plotly !== 'undefined' && Plotly.Plots) {
+                        try {
+                            // Calculate actual available height
+                            const cardRect = element.getBoundingClientRect();
+                            const headerHeight = 60; // Fixed header height
+                            const padding = 60; // Content padding + chart padding
+
+                            const newHeight = Math.max(250, cardRect.height - headerHeight - padding);
+                            const newWidth = Math.max(350, cardRect.width - 40);
+
+                            Plotly.relayout(chartDiv, {
+                                width: newWidth,
+                                height: newHeight
+                            });
+                        } catch (error) {
+                            console.log('Plotly resize warning:', error);
+                        }
+                    }
+                }, 150);
+            }
+
+            function stopResize(e) {
+                if (!isResizing) return;
+
+                isResizing = false;
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Clean up
+                element.classList.remove('resizing');
+                document.body.style.cursor = originalCursor;
+
+                // Remove event listeners
+                document.removeEventListener('mousemove', doResize, true);
+                document.removeEventListener('mouseup', stopResize, true);
+
+                // Final Plotly resize
+                clearTimeout(resizeTimeout);
+                setTimeout(() => {
+                    const chartDiv = element.querySelector('.chart-content > div, [id^="chart_"]');
+                    if (chartDiv && typeof Plotly !== 'undefined' && Plotly.Plots) {
+                        try {
+                            Plotly.Plots.resize(chartDiv);
+                        } catch (error) {
+                            console.log('Plotly final resize warning:', error);
+                        }
+                    }
+                }, 100);
+            }
+
+            // Use capture phase to ensure our handlers run first
+            document.addEventListener('mousemove', doResize, true);
+            document.addEventListener('mouseup', stopResize, true);
+
+            // Safety timeout to prevent stuck resize state
+            setTimeout(() => {
+                if (isResizing) {
+                    console.warn('Resize operation timed out, cleaning up');
+                    stopResize(event);
+                }
+            }, 30000); // 30 second timeout
+        }
+        
+        function showCopyNotification(message = 'Copied to clipboard!') {
+            copyNotification.innerHTML = '<i class="fas fa-check"></i> ' + message;
+            copyNotification.classList.add('show');
+            setTimeout(() => {
+                copyNotification.classList.remove('show');
+            }, 2000);
+        }
+        
+        function initializeOnlyOfficeEditor(docUrl, docKey, filename) {
+            editorLoading.style.display = 'block';
+            spreadsheetContainer.classList.remove('hidden');
+            spreadsheetContainer.classList.add('normal-mode');
+            editorReady = false;
+
+            documentUrl = docUrl;
+            documentKey = docKey;
+
+            // STEP 1: Clean up existing editor instance
+            if (onlyOfficeEditor) {
+                try {
+                    console.log('Destroying existing OnlyOffice editor instance');
+                    onlyOfficeEditor.destroyEditor();
+                    onlyOfficeEditor = null;
+                } catch (destroyError) {
+                    console.warn('Error destroying existing editor:', destroyError);
+                    onlyOfficeEditor = null;
+                }
+            }
+
+            // STEP 2: Get and validate editor container
+            const editorContainer = document.getElementById('onlyoffice-editor');
+            if (!editorContainer) {
+                console.error('OnlyOffice editor container not found in DOM');
+                editorLoading.style.display = 'none';
+                addMessage('ai', `❌ Error: Spreadsheet editor container not found. Please refresh the page.`, true);
+                return;
+            }
+
+            // STEP 3: Clear container content
+            try {
+                editorContainer.innerHTML = '';
+            } catch (innerHTMLError) {
+                console.error('Error clearing editor container:', innerHTMLError);
+                editorLoading.style.display = 'none';
+                addMessage('ai', `❌ Error preparing spreadsheet editor: ${innerHTMLError.message}`, true);
+                return;
+            }
+
+            // STEP 4: Wait a moment for cleanup to complete
+            setTimeout(() => {
+                try {
+                    let fileExtension = 'csv';
+                    if (filename && filename.includes('.')) {
+                        fileExtension = filename.split('.').pop().toLowerCase();
+                    }
+
+                    const config = {
+                        "document": {
+                            "fileType": fileExtension,
+                            "key": docKey,
+                            "title": filename || "Query Results",
+                            "url": docUrl,
+                            "permissions": {
+                                "edit": true,
+                                "download": true,
+                                "print": true
+                            }
+                        },
+                        "documentType": "cell",
+                        "editorConfig": {
+                            "mode": "edit",
+                            "lang": "en",
+                            "callbackUrl": `${window.location.origin}/onlyoffice/callback`,
+                            "customization": {
+                                "autosave": true,
+                                "forcesave": false,
+                                "compactToolbar": false,
+                                "toolbar": true,
+                                "statusbar": true,
+                                "chat": false,
+                                "comments": true,
+                                "zoom": 100
+                            },
+                            "user": {
+                                "id": "user1",
+                                "name": "User"
+                            }
+                        },
+                        "width": "100%",
+                        "height": "100%",
+                        "events": {
+                            "onAppReady": onEditorReady,
+                            "onDocumentStateChange": onDocumentStateChange,
+                            "onError": onEditorError
+                        }
+                    };
+
+                    console.log('Initializing new OnlyOffice editor with config:', config);
+                    onlyOfficeEditor = new DocsAPI.DocEditor("onlyoffice-editor", config);
+
+                } catch (error) {
+                    console.error('Error initializing OnlyOffice editor:', error);
+                    editorLoading.style.display = 'none';
+                    addMessage('ai', `❌ Error initializing spreadsheet editor: ${error.message}`, true);
+                }
+            }, 500); // Wait 500ms for cleanup to complete
+        }
+
+        function cleanupOnlyOfficeEditor() {
+            if (onlyOfficeEditor) {
+                try {
+                    console.log('Cleaning up OnlyOffice editor');
+                    onlyOfficeEditor.destroyEditor();
+                    onlyOfficeEditor = null;
+                } catch (error) {
+                    console.warn('Error during editor cleanup:', error);
+                    onlyOfficeEditor = null;
+                }
+            }
+
+            const editorContainer = document.getElementById('onlyoffice-editor');
+            if (editorContainer) {
+                editorContainer.innerHTML = '';
+            }
+
+            editorReady = false;
+            documentKey = null;
+            documentUrl = null;
+        }
+        
+        function onEditorReady() {
+            console.log('OnlyOffice editor is ready');
+            editorLoading.style.display = 'none';
+            editorReady = true;
+            addMessage('ai', '✅ OnlyOffice spreadsheet editor is ready! You can now view and analyze your query results.');
+        }
+        
+        function onDocumentStateChange(event) {
+            console.log('Document state changed:', event);
+        }
+        
+        function onEditorError(event) {
+            console.error('OnlyOffice editor error:', event);
+            editorLoading.style.display = 'none';
+            editorReady = false;
+            addMessage('ai', `❌ Editor error: ${event.data}`, true);
+        }
+        
+        function downloadSpreadsheet() {
+            fetch('/download', {
+                method: 'GET'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Download failed');
+                    });
+                }
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                a.download = `database_results_${timestamp}.csv`;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                addMessage('ai', `✅ Results downloaded successfully as "${a.download}"`);
+            })
+            .catch(error => {
+                console.error('Download error:', error);
+                addMessage('ai', `❌ Error downloading file: ${error.message}`, true);
+            });
+        }
+        
+        function toggleFullScreen() {
+            isFullScreen = !isFullScreen;
+
+            if (isFullScreen) {
+                // Store current sidebar state before going fullscreen
+                window.sidebarStateBeforeFullscreen = sidebar.classList.contains('collapsed');
+
+                spreadsheetContainer.classList.add('fullscreen-mode');
+                spreadsheetContainer.classList.remove('normal-mode');
+                sidebar.classList.add('collapsed');
+                contentArea.classList.add('expanded');
+                contentArea.classList.remove('sidebar-collapsed'); // Remove this to avoid conflicts
+                sidebarToggle.classList.remove('show'); // Use 'show' instead of 'hidden'
+
+                viewModeToggle.innerHTML = '<i class="fas fa-compress"></i> Exit Full Screen';
+
+            } else {
+                spreadsheetContainer.classList.remove('fullscreen-mode');
+                spreadsheetContainer.classList.add('normal-mode');
+
+                // Restore previous sidebar state
+                if (window.sidebarStateBeforeFullscreen) {
+                    // Sidebar was collapsed before fullscreen
+                    sidebar.classList.add('collapsed');
+                    contentArea.classList.add('sidebar-collapsed');
+                    contentArea.classList.remove('expanded');
+                    sidebarToggle.classList.add('show');
+                } else {
+                    // Sidebar was expanded before fullscreen
+                    sidebar.classList.remove('collapsed');
+                    contentArea.classList.remove('expanded', 'sidebar-collapsed');
+                    sidebarToggle.classList.remove('show');
+                }
+
+                viewModeToggle.innerHTML = '<i class="fas fa-expand"></i> Full Screen';
+            }
+
+            setTimeout(() => {
+                if (onlyOfficeEditor) {
+                    try {
+                        console.log('Full screen toggled, OnlyOffice should auto-resize');
+                    } catch (error) {
+                        console.log('OnlyOffice resize error:', error);
+                    }
+                }
+            }, 350);
+        }
+
+        function collapseSidebar() {
+            sidebar.classList.add('collapsed');
+            contentArea.classList.add('sidebar-collapsed');
+            sidebarToggle.classList.add('show');
+
+            // Update icon
+            const toggleIcon = sidebarToggle.querySelector('i');
+            toggleIcon.className = 'fas fa-chevron-right';
+            sidebarToggle.title = 'Show Sidebar';
+
+            // Force OnlyOffice to resize - multiple approaches
+            setTimeout(() => {
+                // Method 1: Window resize event
+                window.dispatchEvent(new Event('resize'));
+
+                // Method 2: Force reflow of OnlyOffice container
+                const editorElement = document.getElementById('onlyoffice-editor');
+                if (editorElement) {
+                    const currentDisplay = editorElement.style.display;
+                    editorElement.style.display = 'none';
+                    editorElement.offsetHeight; // Force reflow
+                    editorElement.style.display = currentDisplay || '';
+                }
+
+                // Method 3: Trigger another resize after reflow
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                }, 100);
+
+            }, 350);
+        }
+
+        function showSidebar() {
+            sidebar.classList.remove('collapsed');
+            contentArea.classList.remove('sidebar-collapsed');
+            sidebarToggle.classList.remove('show');
+
+            // Update icon
+            const toggleIcon = sidebarToggle.querySelector('i');
+            toggleIcon.className = 'fas fa-chevron-right';
+            sidebarToggle.title = 'Show Sidebar';
+
+            // Force OnlyOffice to resize back
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+
+                const editorElement = document.getElementById('onlyoffice-editor');
+                if (editorElement) {
+                    const currentDisplay = editorElement.style.display;
+                    editorElement.style.display = 'none';
+                    editorElement.offsetHeight; // Force reflow
+                    editorElement.style.display = currentDisplay || '';
+                }
+
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                }, 100);
+
+            }, 350);
+        }
+        
+        function addMessage(type, content, isError = false, isLoading = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            if (isLoading) {
+                messageDiv.innerHTML = `<div class="loading"></div> ${content}`;
+                messageDiv.classList.add('loading-message');
+            } else {
+                const prefix = type === 'user' ? '<strong>You:</strong> ' : 
+                              type === 'system' ? '<strong>System:</strong> ' : 
+                              '<strong>AI:</strong> ';
+                messageDiv.innerHTML = prefix + content;
+                
+                if (isError) {
+                    messageDiv.style.borderLeft = '3px solid #FF544F';
+                }
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function removeLastLoadingMessage() {
+            const loadingMessages = chatMessages.querySelectorAll('.loading-message');
+            if (loadingMessages.length > 0) {
+                loadingMessages[loadingMessages.length - 1].remove();
+            }
+        }
+
+        // Enhanced clear chat function for two-step workflow
+        function clearChatMessages() {
+            fetch('/clear_chat', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Session history cleared successfully');
+                } else {
+                    console.error('Error clearing session history:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error clearing session history:', error);
+            });
+
+            // Clear all step progress indicators
+            document.querySelectorAll('.step-progress').forEach(elem => elem.remove());
+
+            // Clear the chat with updated message for two-step workflow
+            chatMessages.innerHTML = `
+                <div class="message ai-message">
+                    <strong>AI:</strong> Chat cleared! Ready for two-step database analysis.
+                    <br>🔄 <strong>How it works:</strong>
+                    <br>• <span class="step-badge step-1">Step 1</span> Fresh data fetched from database
+                    <br>• <span class="step-badge step-2">Step 2</span> AI analysis of the data
+                    <br><small>💡 <em>Ask any question about your database and I'll handle both steps automatically!</em></small>
+                </div>
+            `;
+        }
+        
+        // Add error handling in context-related functions
+        function handleContextError(error, operation) {
+            console.error(`Context ${operation} error:`, error);
+
+            // Show user-friendly error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'context-error';
+            errorDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                Context ${operation} failed: ${error.message}
+                <br><small>The system will continue with basic schema information only.</small>
+            `;
+
+            // Add to context status area if it exists
+            const contextArea = document.getElementById('contextStatusContent');
+            if (contextArea) {
+                contextArea.appendChild(errorDiv);
+            }
+
+            // Auto-remove after 10 seconds
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.parentNode.removeChild(errorDiv);
+                }
+            }, 10000);
+        }
+
+        // Window resize handler
+        window.addEventListener('resize', function() {
+            if (onlyOfficeEditor && spreadsheetContainer && !spreadsheetContainer.classList.contains('hidden')) {
+                clearTimeout(window.resizeTimeout);
+                window.resizeTimeout = setTimeout(function() {
+                    try {
+                        console.log('Window resized, OnlyOffice should auto-adjust');
+                    } catch (error) {
+                        console.log('Resize handler: OnlyOffice not ready');
+                    }
+                }, 300);
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F11' || (e.altKey && e.key === 'Enter')) {
+                e.preventDefault();
+                if (!spreadsheetContainer.classList.contains('hidden')) {
+                    toggleFullScreen();
+                }
+            }
+            
+            if (e.key === 'Escape') {
+                if (isFullScreen) {
+                    toggleFullScreen();
+                } else {
+                    // Close any open copy menus
+                    document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+                }
+            }
+
+            if (e.key === 'Escape' && e.shiftKey) {
+                // Shift + ESC: Emergency reset all cards
+                console.log('Emergency reset triggered');
+
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+
+                activeOutputs.forEach((output, outputId) => {
+                    emergencyRecoverCard(outputId);
+                });
+
+                addMessage('ai', '🔧 Emergency recovery applied to all output cards');
+            }
+        });
+
+        // Global cursor cleanup on window events
+        window.addEventListener('focus', function() {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+
+        window.addEventListener('blur', function() {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+    </script>
+</body>
+</html>

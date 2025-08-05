@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Wizard Template Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+        }
+
+        .form-section:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .dynamic-section {
+            display: none;
+        }
+
+        .dynamic-section.active {
+            display: block;
+        }
+
+        .add-button, .remove-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .add-button {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        .add-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+        }
+
+        .remove-button {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+        }
+
+        .remove-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 101, 101, 0.3);
+        }
+
+        .item-container {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .item-title {
+            font-weight: 600;
+            color: #2d3748;
+            flex-grow: 1;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #4fd1c7 0%, #06b6d4 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(79, 209, 199, 0.4);
+        }
+
+        .expected-values {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .expected-value {
+            background: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Data Wizard Template Creator</h1>
+            <p>Create Enhanced Data Analysis Templates</p>
+        </div>
+
+        <div class="form-container">
+            <form id="templateForm">
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h2 class="section-title">Basic Information</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="templateType">Template Type *</label>
+                            <select id="templateType" required>
+                                <option value="">Select Template Type</option>
+                                <option value="single">Single Worksheet/CSV</option>
+                                <option value="csv_collection">CSV Collection</option>
+                                <option value="multi_worksheet">Multi-Worksheet</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="templateId">Template ID *</label>
+                            <input type="text" id="templateId" required placeholder="e.g., sales_report_v1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="templateName">Template Name *</label>
+                            <input type="text" id="templateName" required placeholder="e.g., Monthly Sales Report">
+                        </div>
+                        <div class="form-group">
+                            <label for="version">Version</label>
+                            <input type="text" id="version" placeholder="1.0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="domain">Domain</label>
+                            <input type="text" id="domain" placeholder="e.g., sales, ecommerce, finance">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" placeholder="Describe the purpose of this template"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="businessContext">Business Context</label>
+                        <textarea id="businessContext" placeholder="Explain the business context and use cases"></textarea>
+                    </div>
+                </div>
+
+                <!-- Single Worksheet Columns -->
+                <div id="singleColumns" class="form-section dynamic-section">
+                    <h2 class="section-title">Columns</h2>
+                    <div id="columnsContainer"></div>
+                    <button type="button" class="add-button" onclick="addColumn()">+ Add Column</button>
+                </div>
+
+                <!-- Worksheets (for multi-worksheet and CSV collection) -->
+                <div id="worksheetsSection" class="form-section dynamic-section">
+                    <h2 class="section-title">Worksheets</h2>
+                    <div id="worksheetsContainer"></div>
+                    <button type="button" class="add-button" onclick="addWorksheet()">+ Add Worksheet</button>
+                </div>
+
+                <!-- Metrics -->
+                <div class="form-section">
+                    <h2 class="section-title">Metrics</h2>
+                    <div id="metricsContainer"></div>
+                    <button type="button" class="add-button" onclick="addMetric()">+ Add Metric</button>
+                </div>
+
+                <!-- Visualizations -->
+                <div class="form-section">
+                    <h2 class="section-title">Visualizations</h2>
+                    <div id="visualizationsContainer"></div>
+                    <button type="button" class="add-button" onclick="addVisualization()">+ Add Visualization</button>
+                </div>
+
+                <!-- Common Analyses -->
+                <div class="form-section">
+                    <h2 class="section-title">Common Analyses</h2>
+                    <div id="analysesContainer"></div>
+                    <button type="button" class="add-button" onclick="addAnalysis()">+ Add Analysis</button>
+                </div>
+
+                <!-- Detection Rules -->
+                <div class="form-section">
+                    <h2 class="section-title">Detection Rules</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="requiredColumns">Required Columns (comma-separated)</label>
+                            <input type="text" id="requiredColumns" placeholder="customer_id, revenue, sale_date">
+                        </div>
+                        <div class="form-group">
+                            <label for="columnPatterns">Column Patterns (comma-separated)</label>
+                            <input type="text" id="columnPatterns" placeholder="customer, revenue, sales, product">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="filenamePatterns">Filename Patterns (comma-separated)</label>
+                            <input type="text" id="filenamePatterns" placeholder="sales, revenue, monthly, report">
+                        </div>
+                        <div class="form-group">
+                            <label for="worksheetPatterns">Worksheet Patterns (comma-separated)</label>
+                            <input type="text" id="worksheetPatterns" placeholder="sales, customer, product">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button type="button" class="btn-secondary" onclick="previewJSON()">Preview JSON</button>
+                    <button type="button" class="btn-primary" onclick="generateJSON()">Generate & Download</button>
+                </div>
+            </form>
+
+            <!-- JSON Preview Section -->
+            <div id="jsonPreviewSection" class="form-section" style="display: none;">
+                <div class="section-title">
+                    JSON Preview
+                    <button type="button" class="btn-close" onclick="closePreview()" style="float: right; background: #f56565; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">✕ Close</button>
+                </div>
+                <div class="preview-container">
+                    <pre id="jsonPreviewContent" style="background: #1a202c; color: #e2e8f0; padding: 20px; border-radius: 10px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; max-height: 500px; overflow-y: auto;"></pre>
+                </div>
+                <div class="preview-actions" style="margin-top: 15px; text-align: center;">
+                    <button type="button" class="btn-primary" onclick="copyToClipboard()" style="margin-right: 10px;">📋 Copy JSON</button>
+                    <button type="button" class="btn-primary" onclick="generateJSON()">💾 Download JSON</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let columnCounter = 0;
+        let worksheetCounter = 0;
+        let metricCounter = 0;
+        let visualizationCounter = 0;
+        let analysisCounter = 0;
+
+        // Template type change handler
+        document.getElementById('templateType').addEventListener('change', function() {
+            const type = this.value;
+            const singleColumns = document.getElementById('singleColumns');
+            const worksheetsSection = document.getElementById('worksheetsSection');
+            
+            // Hide all dynamic sections first
+            singleColumns.classList.remove('active');
+            worksheetsSection.classList.remove('active');
+            
+            if (type === 'single') {
+                singleColumns.classList.add('active');
+            } else if (type === 'csv_collection' || type === 'multi_worksheet') {
+                worksheetsSection.classList.add('active');
+            }
+        });
+
+        function addColumn(containerId = 'columnsContainer') {
+            columnCounter++;
+            const container = document.getElementById(containerId);
+            const columnDiv = document.createElement('div');
+            columnDiv.className = 'item-container';
+            columnDiv.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">Column ${columnCounter}</span>
+                    <button type="button" class="remove-button" onclick="removeItem(this)">Remove</button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Column Name *</label>
+                        <input type="text" class="column-name" required placeholder="e.g., customer_id">
+                    </div>
+                    <div class="form-group">
+                        <label>Business Name</label>
+                        <input type="text" class="column-business-name" placeholder="e.g., Customer ID">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data Type</label>
+                        <select class="column-data-type">
+                            <option value="text">Text</option>
+                            <option value="numeric">Numeric</option>
+                            <option value="datetime">DateTime</option>
+                            <option value="categorical">Categorical</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Column Type</label>
+                        <select class="column-business-type">
+                            <option value="identifier">Identifier</option>
+                            <option value="dimension">Dimension</option>
+                            <option value="metric">Metric</option>
+                            <option value="timestamp">Timestamp</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="column-description" placeholder="Describe the column purpose"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Unit (for metrics)</label>
+                        <input type="text" class="column-unit" placeholder="e.g., USD, units, kg">
+                    </div>
+                    <div class="form-group">
+                        <label>Valid Range (min,max for numeric)</label>
+                        <input type="text" class="column-range" placeholder="e.g., 0.01,100000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Expected Values (comma-separated, for categorical)</label>
+                    <input type="text" class="column-expected-values" placeholder="e.g., Active, Inactive, Pending">
+                </div>
+            `;
+            container.appendChild(columnDiv);
+        }
+
+        function addWorksheet() {
+            worksheetCounter++;
+            const container = document.getElementById('worksheetsContainer');
+            const worksheetDiv = document.createElement('div');
+            worksheetDiv.className = 'item-container';
+            worksheetDiv.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">Worksheet ${worksheetCounter}</span>
+                    <button type="button" class="remove-button" onclick="removeItem(this)">Remove</button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Worksheet Name *</label>
+                        <input type="text" class="worksheet-name" required placeholder="e.g., Sales_Data">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Key</label>
+                        <input type="text" class="worksheet-primary-key" placeholder="e.g., transaction_id">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Is Required</label>
+                        <select class="worksheet-required">
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>File Patterns (comma-separated)</label>
+                        <input type="text" class="worksheet-patterns" placeholder="e.g., orders, transactions, sales">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="worksheet-description" placeholder="Describe the worksheet purpose"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Relationships (comma-separated worksheet names)</label>
+                    <input type="text" class="worksheet-relationships" placeholder="e.g., Customers, Products">
+                </div>
+                <h4 style="margin-top: 20px;">Columns</h4>
+                <div class="worksheet-columns-container" id="worksheet-columns-${worksheetCounter}"></div>
+                <button type="button" class="add-button" onclick="addColumn('worksheet-columns-${worksheetCounter}')">+ Add Column</button>
+            `;
+            container.appendChild(worksheetDiv);
+        }
+
+        function addMetric() {
+            metricCounter++;
+            const container = document.getElementById('metricsContainer');
+            const metricDiv = document.createElement('div');
+            metricDiv.className = 'item-container';
+            metricDiv.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">Metric ${metricCounter}</span>
+                    <button type="button" class="remove-button" onclick="removeItem(this)">Remove</button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Metric Name *</label>
+                        <input type="text" class="metric-name" required placeholder="e.g., Total Revenue">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" class="metric-category" list="metric-categories" placeholder="Select or enter custom category">
+                        <datalist id="metric-categories">
+                            <option value="financial">Financial</option>
+                            <option value="performance">Performance</option>
+                            <option value="operational">Operational</option>
+                        </datalist>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="metric-description" placeholder="Describe what this metric measures"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Formula</label>
+                        <input type="text" class="metric-formula" placeholder="e.g., current_data['revenue'].sum()">
+                    </div>
+                    <div class="form-group">
+                        <label>Display Format</label>
+                        <input type="text" class="metric-format" placeholder="e.g., $%.2f, %.1f%%, %.0f units">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Worksheets Involved (comma-separated)</label>
+                    <input type="text" class="metric-worksheets" placeholder="e.g., Sales_Data, Products">
+                </div>
+            `;
+            container.appendChild(metricDiv);
+        }
+
+        function addVisualization() {
+            visualizationCounter++;
+            const container = document.getElementById('visualizationsContainer');
+            const vizDiv = document.createElement('div');
+            vizDiv.className = 'item-container';
+            vizDiv.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">Visualization ${visualizationCounter}</span>
+                    <button type="button" class="remove-button" onclick="removeItem(this)">Remove</button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Visualization Name *</label>
+                        <input type="text" class="viz-name" required placeholder="e.g., Revenue by Product Category">
+                    </div>
+                    <div class="form-group">
+                        <label>Chart Type</label>
+                        <input type="text" class="viz-chart-type" list="chart-types" placeholder="Select or enter custom chart type">
+                        <datalist id="chart-types">
+                            <option value="bar">Bar Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="scatter">Scatter Plot</option>
+                            <option value="histogram">Histogram</option>
+                        </datalist>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="viz-description" placeholder="Describe what this visualization shows"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>X-Axis</label>
+                        <input type="text" class="viz-x-axis" placeholder="e.g., product_category">
+                    </div>
+                    <div class="form-group">
+                        <label>Y-Axis</label>
+                        <input type="text" class="viz-y-axis" placeholder="e.g., revenue">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Group By (optional)</label>
+                        <input type="text" class="viz-group-by" placeholder="e.g., metric_type">
+                    </div>
+                    <div class="form-group">
+                        <label>Worksheets Involved (comma-separated)</label>
+                        <input type="text" class="viz-worksheets" placeholder="e.g., Sales_Data, Products">
+                    </div>
+                </div>
+            `;
+            container.appendChild(vizDiv);
+        }
+
+        function addAnalysis() {
+            analysisCounter++;
+            const container = document.getElementById('analysesContainer');
+            const analysisDiv = document.createElement('div');
+            analysisDiv.className = 'item-container';
+            analysisDiv.innerHTML = `
+                <div class="item-header">
+                    <span class="item-title">Analysis ${analysisCounter}</span>
+                    <button type="button" class="remove-button" onclick="removeItem(this)">Remove</button>
+                </div>
+                <div class="form-group">
+                    <label>Analysis Description *</label>
+                    <input type="text" class="analysis-text" required placeholder="e.g., Show total revenue and compare to previous period">
+                </div>
+            `;
+            container.appendChild(analysisDiv);
+        }
+
+        function removeItem(button) {
+            button.closest('.item-container').remove();
+        }
+
+        function collectColumns(container) {
+            const columns = [];
+            const columnContainers = container.querySelectorAll('.item-container');
+            
+            columnContainers.forEach(container => {
+                const column = {
+                    name: container.querySelector('.column-name')?.value || '',
+                    business_name: container.querySelector('.column-business-name')?.value || '',
+                    description: container.querySelector('.column-description')?.value || '',
+                    data_type: container.querySelector('.column-data-type')?.value || 'text',
+                    business_type: container.querySelector('.column-business-type')?.value || 'dimension'
+                };
+                
+                const unit = container.querySelector('.column-unit')?.value;
+                if (unit) column.unit = unit;
+                
+                const range = container.querySelector('.column-range')?.value;
+                if (range) {
+                    const rangeValues = range.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+                    if (rangeValues.length === 2) {
+                        column.valid_range = rangeValues;
+                    }
+                }
+                
+                const expectedValues = container.querySelector('.column-expected-values')?.value;
+                if (expectedValues) {
+                    column.expected_values = expectedValues.split(',').map(v => v.trim()).filter(v => v);
+                }
+                
+                if (column.name) columns.push(column);
+            });
+            
+            return columns;
+        }
+
+        function buildJSONTemplate() {
+            const templateType = document.getElementById('templateType').value;
+            if (!templateType) {
+                return null;
+            }
+
+            const currentDate = new Date().toISOString();
+            
+            const baseTemplate = {
+                id: document.getElementById('templateId').value,
+                name: document.getElementById('templateName').value,
+                description: document.getElementById('description').value,
+                version: document.getElementById('version').value || '1.0',
+                domain: document.getElementById('domain').value || 'general',
+                business_context: document.getElementById('businessContext').value
+            };
+
+            if (templateType !== 'single') {
+                baseTemplate.template_type = templateType;
+            }
+
+            // Add columns for single worksheet type
+            if (templateType === 'single') {
+                const columnsContainer = document.getElementById('columnsContainer');
+                baseTemplate.columns = collectColumns(columnsContainer);
+            }
+
+            // Add worksheets for multi-worksheet and CSV collection types
+            if (templateType === 'csv_collection' || templateType === 'multi_worksheet') {
+                const worksheets = [];
+                const worksheetContainers = document.querySelectorAll('#worksheetsContainer .item-container');
+                
+                worksheetContainers.forEach(container => {
+                    const worksheet = {
+                        name: container.querySelector('.worksheet-name').value,
+                        description: container.querySelector('.worksheet-description').value,
+                        is_required: container.querySelector('.worksheet-required').value === 'true',
+                        primary_key: container.querySelector('.worksheet-primary-key').value
+                    };
+                    
+                    const patterns = container.querySelector('.worksheet-patterns').value;
+                    if (patterns) {
+                        worksheet.file_patterns = patterns.split(',').map(p => p.trim()).filter(p => p);
+                    }
+                    
+                    const relationships = container.querySelector('.worksheet-relationships').value;
+                    if (relationships) {
+                        worksheet.relationships = relationships.split(',').map(r => r.trim()).filter(r => r);
+                    }
+                    
+                    const columnsContainer = container.querySelector('.worksheet-columns-container');
+                    worksheet.columns = collectColumns(columnsContainer);
+                    
+                    if (worksheet.name) worksheets.push(worksheet);
+                });
+                
+                baseTemplate.worksheets = worksheets;
+            }
+
+            // Add metrics
+            const metrics = [];
+            const metricContainers = document.querySelectorAll('#metricsContainer .item-container');
+            metricContainers.forEach(container => {
+                const metric = {
+                    name: container.querySelector('.metric-name').value,
+                    description: container.querySelector('.metric-description').value,
+                    formula: container.querySelector('.metric-formula').value,
+                    category: container.querySelector('.metric-category').value,
+                    display_format: container.querySelector('.metric-format').value
+                };
+                
+                const worksheets = container.querySelector('.metric-worksheets').value;
+                if (worksheets) {
+                    metric.worksheets_involved = worksheets.split(',').map(w => w.trim()).filter(w => w);
+                }
+                
+                if (metric.name) metrics.push(metric);
+            });
+            baseTemplate.metrics = metrics;
+
+            // Add visualizations
+            const visualizations = [];
+            const vizContainers = document.querySelectorAll('#visualizationsContainer .item-container');
+            vizContainers.forEach(container => {
+                const viz = {
+                    name: container.querySelector('.viz-name').value,
+                    description: container.querySelector('.viz-description').value,
+                    chart_type: container.querySelector('.viz-chart-type').value,
+                    x_axis: container.querySelector('.viz-x-axis').value,
+                    y_axis: container.querySelector('.viz-y-axis').value
+                };
+                
+                const groupBy = container.querySelector('.viz-group-by').value;
+                if (groupBy) viz.group_by = groupBy;
+                
+                const worksheets = container.querySelector('.viz-worksheets').value;
+                if (worksheets) {
+                    viz.worksheets_involved = worksheets.split(',').map(w => w.trim()).filter(w => w);
+                }
+                
+                if (viz.name) visualizations.push(viz);
+            });
+            baseTemplate.visualizations = visualizations;
+
+            // Add common analyses
+            const analyses = [];
+            const analysisContainers = document.querySelectorAll('#analysesContainer .item-container');
+            analysisContainers.forEach(container => {
+                const text = container.querySelector('.analysis-text').value;
+                if (text) analyses.push(text);
+            });
+            baseTemplate.common_analyses = analyses;
+
+            // Add detection rules
+            const detectionRules = {};
+            const requiredCols = document.getElementById('requiredColumns').value;
+            if (requiredCols) {
+                detectionRules.required_columns = requiredCols.split(',').map(c => c.trim()).filter(c => c);
+            }
+            
+            const colPatterns = document.getElementById('columnPatterns').value;
+            if (colPatterns) {
+                detectionRules.column_patterns = colPatterns.split(',').map(p => p.trim()).filter(p => p);
+            }
+            
+            const filePatterns = document.getElementById('filenamePatterns').value;
+            if (filePatterns) {
+                detectionRules.filename_patterns = filePatterns.split(',').map(p => p.trim()).filter(p => p);
+            }
+            
+            const wsPatterns = document.getElementById('worksheetPatterns').value;
+            if (wsPatterns) {
+                detectionRules.worksheet_patterns = wsPatterns.split(',').map(p => p.trim()).filter(p => p);
+            }
+            
+            baseTemplate.detection_rules = detectionRules;
+
+            // Add timestamps
+            baseTemplate.created_date = currentDate;
+            baseTemplate.last_modified = currentDate;
+
+            return baseTemplate;
+        }
+
+        function generateJSON() {
+            const templateData = buildJSONTemplate();
+            if (!templateData) {
+                alert('Please select a template type');
+                return;
+            }
+
+            // Download the JSON file
+            const jsonString = JSON.stringify(templateData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${templateData.id || 'template'}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function previewJSON() {
+            const templateData = buildJSONTemplate();
+            if (!templateData) {
+                alert('Please select a template type');
+                return;
+            }
+
+            const jsonString = JSON.stringify(templateData, null, 2);
+            document.getElementById('jsonPreviewContent').textContent = jsonString;
+            document.getElementById('jsonPreviewSection').style.display = 'block';
+            
+            // Scroll to preview section
+            document.getElementById('jsonPreviewSection').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+
+        function closePreview() {
+            document.getElementById('jsonPreviewSection').style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const jsonContent = document.getElementById('jsonPreviewContent').textContent;
+            navigator.clipboard.writeText(jsonContent).then(function() {
+                alert('JSON copied to clipboard!');
+            }).catch(function() {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = jsonContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('JSON copied to clipboard!');
+            });
+        }
+
+        // Initialize with one column for single worksheet
+        document.addEventListener('DOMContentLoaded', function() {
+            addColumn();
+            addMetric();
+            addVisualization();
+            addAnalysis();
+        });
+    </script>
+</body>
+</html>
