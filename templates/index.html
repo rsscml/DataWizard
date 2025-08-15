@@ -749,6 +749,54 @@
             overflow-x: auto;
             box-shadow: 0 4px 12px rgba(115, 112, 110, 0.15);
         }
+
+        /* Toggleable Code Section */
+        .code-section {
+            margin-top: 15px;
+            border-top: 1px solid #005EEF;
+            padding-top: 15px;
+        }
+
+        .code-toggle-btn {
+            background: linear-gradient(135deg, #73706E 0%, #5a5855 100%);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .code-toggle-btn:hover {
+            background: linear-gradient(135deg, #5a5855 0%, #4a4845 100%);
+            transform: translateY(-1px);
+        }
+
+        .code-toggle-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .code-toggle-btn.expanded i {
+            transform: rotate(90deg);
+        }
+
+        .code-content {
+            margin-top: 10px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .code-content.show {
+            max-height: 500px;
+            overflow-y: auto;
+            opacity: 1;
+        }
         
         /* Ensure embedded chart takes full space */
         .embedded-chart {
@@ -1341,19 +1389,18 @@
 
         /* Ensure embedded chart uses full height in combined output */
         .chart-focused .embedded-chart {
-            margin: 0;
+             margin: 0;
             flex: 1;
-            min-height: 300px;
-            height: 100%; /* Force full height */
-            display: flex;
-            flex-direction: column;
+            height: 100%;
+            min-height: unset;
+            border-radius: 0;
         }
 
         .chart-focused .chart-content {
             padding: 5px;
-            flex: 1; /* Take remaining space after header */
+            flex: 1;
             height: 100%;
-            min-height: 250px;
+            min-height: unset;
         }
 
         .chart-focused .chart-content > div {
@@ -1806,6 +1853,321 @@
             .compact-file-info {
                 justify-content: center;
             }
+        }
+
+        /* Nested Dictionary Styles */
+        .nested-dictionary {
+            margin: 10px 0;
+        }
+
+        .dictionary-section {
+            border: 1px solid #e8f2ff;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .dictionary-section-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #e8f2ff;
+            user-select: none;
+        }
+
+        .dictionary-section-header:hover {
+            background: linear-gradient(135deg, #e8f2ff 0%, #d1e7ff 100%);
+        }
+
+        .dictionary-section-content {
+            padding: 15px;
+            background: white;
+        }
+
+        .dictionary-simple-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .dictionary-simple-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            color: #005EEF;
+            width: 12px;
+        }
+
+        .nested-table {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .nested-table th,
+        .nested-table td {
+            padding: 8px 10px;
+        }
+
+        /* Value type styles */
+        .simple-value {
+            color: #73706E;
+        }
+
+        .null-value {
+            color: #999;
+            font-style: italic;
+        }
+
+        .empty-array {
+            color: #999;
+            font-style: italic;
+        }
+
+        .inline-array {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .unknown-value {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        /* Type badges */
+        .value-type-badge {
+            margin-left: auto;
+        }
+
+        .type-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .type-badge.array {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .type-badge.object {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .type-badge.primitive {
+            background: #e8f5e8;
+            color: #388e3c;
+        }
+
+        /* Combined Output Toggle Styles */
+        .combined-output {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .combined-output-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+            padding: 10px 15px;
+            border-bottom: 2px solid #005EEF;
+            border-radius: 8px 8px 0 0;
+            flex-shrink: 0;
+        }
+
+        .output-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #73706E;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .toggle-label.active {
+            color: #005EEF;
+            opacity: 1;
+        }
+
+        .output-toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .output-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .output-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #005EEF;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .output-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .output-slider {
+            background-color: #FF69B4;
+        }
+
+        input:checked + .output-slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Combined sections */
+        .combined-section {
+            flex: 1;
+            overflow: hidden;
+            display: none;
+        }
+
+        .combined-section.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .combined-section.chart-section {
+            padding: 0;
+        }
+
+        .combined-section.data-section {
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .full-data-content {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        /* Ensure chart takes full available space when active */
+        .combined-section.chart-section.active .embedded-chart {
+            flex: 1;
+            height: 100%;
+            margin: 0;
+        }
+
+        .combined-section.chart-section.active .chart-content {
+            flex: 1;
+            height: 100%;
+            min-height: unset;
+        }
+
+        /* Make data section scrollable when active */
+        .combined-section.data-section.active {
+            overflow-y: auto;
+            max-height: none;
+        }
+
+        /* Improve nested dictionary display in full data view */
+        .full-data-content .nested-dictionary {
+            margin: 0;
+        }
+
+        .full-data-content .dictionary-section {
+            margin-bottom: 15px;
+        }
+
+        /* Remove the old combined output constraints */
+        .combined-output .chart-priority,
+        .combined-output .data-section.collapsed,
+        .combined-output .data-content {
+            /* Remove these old rules or set them to auto */
+            max-height: none;
+            flex: unset;
+        }
+        
+        /* Data section header styles */
+        .data-section-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+            padding: 10px 15px;
+            border-bottom: 1px solid #005EEF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #73706E;
+            border-radius: 8px 8px 0 0;
+            margin: -15px -15px 15px -15px; /* Counteract parent padding */
+        }
+
+        .data-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .data-section-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .data-copy-btn {
+            background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .data-copy-btn:hover {
+            background: linear-gradient(135deg, #0d2499 0%, #0048c7 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(31, 54, 199, 0.2);
+        }
+
+        /* Adjust data content padding */
+        .combined-section.data-section .full-data-content {
+            padding-top: 0; /* Remove top padding since header provides spacing */
         }
     </style>
 </head>
@@ -2663,41 +3025,68 @@
         
         function showCopyMenu(event, outputId) {
             event.stopPropagation();
-            
+
             // Remove existing copy menus
             document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
-            
+
             const output = activeOutputs.get(outputId);
             if (!output) return;
-            
+
             const copyMenu = document.createElement('div');
             copyMenu.className = 'copy-menu';
             copyMenu.style.left = event.pageX + 'px';
             copyMenu.style.top = event.pageY + 'px';
-            
+
             // Check if output contains a chart/plot
             const hasChart = output.data.plot_data && Object.keys(output.data.plot_data).length > 0;
-            
-            copyMenu.innerHTML = `
-                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'text')">
-                    <i class="fas fa-align-left"></i> Copy as Text
-                </div>
-                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'table')">
-                    <i class="fas fa-table"></i> Copy as Table
-                </div>
-                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'json')">
-                    <i class="fas fa-code"></i> Copy as JSON
-                </div>
-                <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'csv')">
-                    <i class="fas fa-file-csv"></i> Copy as CSV
-                </div>
-                ${hasChart ? `<div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'plot')">
-                    <i class="fas fa-chart-line"></i> Copy Plot
-                </div>` : ''}
-            `;
-            
+
+            if (hasChart) {
+                // Chart-specific options
+                copyMenu.innerHTML = `
+                    <div class="copy-menu-item" onclick="downloadChartAsHTML('${outputId}')">
+                        <i class="fas fa-file-code"></i> Download as Interactive HTML
+                    </div>
+                    <div class="copy-menu-item" onclick="openChartInNewTab('${outputId}')">
+                        <i class="fas fa-external-link-alt"></i> Open in New Tab
+                    </div>
+                    <div class="copy-menu-item" onclick="copyChartAsHTML('${outputId}')">
+                        <i class="fas fa-code"></i> Copy HTML Embed Code
+                    </div>
+                    <div class="copy-menu-item" onclick="copyPlotlyJSON('${outputId}')">
+                        <i class="fas fa-brackets-curly"></i> Copy Plotly JSON
+                    </div>
+                    <div class="copy-menu-item" onclick="copyChartLink('${outputId}')">
+                        <i class="fas fa-link"></i> Copy Shareable Link
+                    </div>
+                    <div class="copy-menu-item" onclick="downloadChartAsSVG('${outputId}')">
+                        <i class="fas fa-vector-square"></i> Download as SVG
+                    </div>
+                    ${output.data.result ? `
+                    <hr style="margin: 5px 0; border: none; border-top: 1px solid #e0e0e0;">
+                    <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'csv')">
+                        <i class="fas fa-file-csv"></i> Copy Data as CSV
+                    </div>` : ''}
+                `;
+            } else {
+                // Original menu for non-chart outputs
+                copyMenu.innerHTML = `
+                    <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'text')">
+                        <i class="fas fa-align-left"></i> Copy as Text
+                    </div>
+                    <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'table')">
+                        <i class="fas fa-table"></i> Copy as Table
+                    </div>
+                    <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'json')">
+                        <i class="fas fa-code"></i> Copy as JSON
+                    </div>
+                    <div class="copy-menu-item" onclick="copyOutputContent('${outputId}', 'csv')">
+                        <i class="fas fa-file-csv"></i> Copy as CSV
+                    </div>
+                `;
+            }
+
             document.body.appendChild(copyMenu);
-            
+
             // Position menu to stay within viewport
             const rect = copyMenu.getBoundingClientRect();
             if (rect.right > window.innerWidth) {
@@ -2946,6 +3335,221 @@
                 alert('Copy not supported in this browser. Please select text manually.');
                 document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
             }
+        }
+
+
+        // Download chart as standalone interactive HTML
+        function downloadChartAsHTML(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output || !output.data.plot_data) return;
+
+            const plotData = output.data.plot_data;
+            const query = output.query;
+
+            // Build HTML content as a string without template literals
+            const htmlContent = '<!DOCTYPE html>' +
+                '<html lang="en">' +
+                '<head>' +
+                '<meta charset="UTF-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+                '<title>' + escapeHtml(query) + ' - Interactive Chart</title>' +
+                '<script src="https://cdn.plot.ly/plotly-latest.min.js"></' + 'script>' +
+                '<style>' +
+                'body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }' +
+                'h1 { color: #333; font-size: 1.5em; margin-bottom: 20px; }' +
+                '#chart { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; }' +
+                '.metadata { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px; font-size: 0.9em; color: #666; }' +
+                '</style>' +
+                '</head>' +
+                '<body>' +
+                '<h1>' + escapeHtml(query) + '</h1>' +
+                '<div id="chart"></div>' +
+                '<div class="metadata">' +
+                'Generated: ' + new Date().toLocaleString() + '<br>' +
+                'Source: Data Analysis Platform' +
+                '</div>' +
+                '<script>' +
+                'const plotData = ' + JSON.stringify(plotData) + ';' +
+                'Plotly.newPlot("chart", plotData.data, plotData.layout || {}, {responsive: true});' +
+                '</' + 'script>' +
+                '</body>' +
+                '</html>';
+
+            // Create blob and download
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chart_' + query.replace(/[^a-z0-9]/gi, '_').substring(0, 30) + '_' + Date.now() + '.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            showCopyNotification('Interactive chart downloaded as HTML!');
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+        }
+
+        // Open chart in new tab
+        function openChartInNewTab(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output || !output.data.plot_data) return;
+
+            const plotData = output.data.plot_data;
+            const query = output.query;
+
+            // Create HTML content using string concatenation
+            const htmlContent = '<!DOCTYPE html>' +
+                '<html>' +
+                '<head>' +
+                '<title>' + escapeHtml(query) + ' - Chart</title>' +
+                '<script src="https://cdn.plot.ly/plotly-latest.min.js"></' + 'script>' +
+                '<style>' +
+                'body { margin: 0; padding: 0; }' +
+                '#chart { width: 100vw; height: 100vh; }' +
+                '</style>' +
+                '</head>' +
+                '<body>' +
+                '<div id="chart"></div>' +
+                '<script>' +
+                'const plotData = ' + JSON.stringify(plotData) + ';' +
+                'Plotly.newPlot("chart", plotData.data, plotData.layout || {}, {responsive: true});' +
+                '</' + 'script>' +
+                '</body>' +
+                '</html>';
+
+            // Open in new window
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+                newWindow.document.write(htmlContent);
+                newWindow.document.close();
+            }
+
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+        }
+
+        // Copy chart as embeddable HTML
+        function copyChartAsHTML(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output || !output.data.plot_data) return;
+
+            const plotData = output.data.plot_data;
+            const divId = 'plotly_chart_' + Date.now();
+
+            // Build embed code using string concatenation
+            const embedCode = '<!-- Plotly Chart Embed -->\n' +
+                '<div id="' + divId + '" style="width: 100%; height: 500px;"></div>\n' +
+                '<script src="https://cdn.plot.ly/plotly-latest.min.js"></' + 'script>\n' +
+                '<script>\n' +
+                '    Plotly.newPlot("' + divId + '", \n' +
+                '        ' + JSON.stringify(plotData.data, null, 2) + ', \n' +
+                '        ' + JSON.stringify(plotData.layout || {}, null, 2) + ', \n' +
+                '        {responsive: true}\n' +
+                '    );\n' +
+                '</' + 'script>\n' +
+                '<!-- End Plotly Chart -->';
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(embedCode).then(() => {
+                    showCopyNotification('HTML embed code copied!');
+                });
+            } else {
+                fallbackCopy(embedCode);
+            }
+
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+        }
+
+
+        // Copy Plotly JSON configuration
+        function copyPlotlyJSON(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output || !output.data.plot_data) return;
+
+            const plotlyConfig = {
+                data: output.data.plot_data.data,
+                layout: output.data.plot_data.layout || {},
+                config: {responsive: true}
+            };
+
+            const jsonStr = JSON.stringify(plotlyConfig, null, 2);
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(jsonStr).then(() => {
+                    showCopyNotification('Plotly JSON configuration copied!');
+                });
+            } else {
+                fallbackCopy(jsonStr);
+            }
+
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+        }
+
+        // Generate and copy shareable link (requires backend support)
+        function copyChartLink(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output || !output.data.plot_data) return;
+
+            // Store chart data temporarily in sessionStorage
+            const chartId = `chart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            sessionStorage.setItem(chartId, JSON.stringify({
+                query: output.query,
+                plotData: output.data.plot_data,
+                timestamp: output.timestamp
+            }));
+
+            // Create a shareable link
+            const shareableLink = `${window.location.origin}${window.location.pathname}?chart=${chartId}`;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shareableLink).then(() => {
+                    showCopyNotification('Shareable link copied! (Valid for this session only)');
+                });
+            } else {
+                fallbackCopy(shareableLink);
+            }
+
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+        }
+
+        // Download chart as SVG
+        function downloadChartAsSVG(outputId) {
+            const output = activeOutputs.get(outputId);
+            if (!output || !output.data.plot_data) return;
+
+            // Find the chart container
+            const chartDiv = output.element.querySelector('[id^="chart_"]');
+            if (!chartDiv) return;
+
+            // Use Plotly's downloadImage function
+            Plotly.downloadImage(chartDiv, {
+                format: 'svg',
+                width: 1200,
+                height: 800,
+                filename: `chart_${output.query.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}`
+            }).then(() => {
+                showCopyNotification('Chart downloaded as SVG!');
+            }).catch(error => {
+                console.error('Error downloading SVG:', error);
+                showCopyNotification('Error downloading SVG. Trying alternative method...');
+
+                // Alternative: get SVG from DOM
+                const svg = chartDiv.querySelector('svg');
+                if (svg) {
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `chart_${Date.now()}.svg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }
+            });
+
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
         }
         
         function tableToTSV(table) {
@@ -3324,13 +3928,6 @@
             else if (data.plot_data && Object.keys(data.plot_data).length > 0) {
                 mainContent = formatChartOutput(data.plot_data);
             }
-            // Handle code with result
-            else if (data.code) {
-                mainContent = '<div class="output-code-block"><strong>Generated Code:</strong><br><pre>' + data.code + '</pre></div>';
-                if (data.result) {
-                    mainContent += formatResult(data.result);
-                }
-            }
             // Handle result only
             else if (data.result) {
                 mainContent = formatResult(data.result);
@@ -3339,10 +3936,41 @@
                 mainContent = '<div class="output-single-value">Analysis completed successfully!</div>';
             }
 
+            // Add toggleable code section (for all output types when code is available)
+            const codeSection = formatCodeSection(data);
+
             // Add commentary and insights section
             const insightsSection = formatInsightsSection(data);
 
-            return mainContent + insightsSection;
+            return mainContent + codeSection + insightsSection;
+        }
+
+        function formatCodeSection(data) {
+            if (!data.code) {
+                return '';
+            }
+
+            const uniqueId = `code_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            return `
+                <div class="code-section">
+                    <button class="code-toggle-btn" onclick="toggleCodeDisplay('${uniqueId}', this)">
+                        <i class="fas fa-chevron-right"></i>
+                        <span>Show Generated Code</span>
+                    </button>
+                    <div class="code-content" id="${uniqueId}">
+                        <div class="output-code-block">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong style="color: #ecf0f1;">Generated Python Code:</strong>
+                                <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); border: none; color: #ecf0f1; padding: 4px 10px; border-radius: 4px;" onclick="copyCode('${uniqueId}')">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(data.code)}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function formatInsightsSection(data) {
@@ -3405,31 +4033,51 @@
         function formatCombinedOutput(data) {
             const combinedId = `combined_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            let html = '<div class="combined-output">';
+            let html = `<div class="combined-output" id="${combinedId}">`;
 
-            // Chart section - give it priority space
+            // Add toggle switch header
+            html += `
+                <div class="combined-output-header">
+                    <div class="output-toggle-container">
+                        <span class="toggle-label ${data.plot_data ? 'active' : ''}" data-view="chart">
+                            <i class="fas fa-chart-line"></i> Chart
+                        </span>
+                        <label class="output-toggle-switch">
+                            <input type="checkbox" id="toggle_${combinedId}" ${!data.plot_data ? 'checked' : ''} onchange="toggleCombinedView('${combinedId}')">
+                            <span class="output-slider"></span>
+                        </label>
+                        <span class="toggle-label ${!data.plot_data ? 'active' : ''}" data-view="data">
+                            <i class="fas fa-table"></i> Data
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            // Chart section - visible by default if plot data exists
             if (data.plot_data && Object.keys(data.plot_data).length > 0) {
                 html += `
-                    <div class="output-section chart-priority">
-                        <div class="output-section-content chart-focused">
-                            ${formatChartOutput(data.plot_data, combinedId + '_chart')}
-                        </div>
+                    <div class="combined-section chart-section active" id="chart_section_${combinedId}">
+                        ${formatChartOutput(data.plot_data, combinedId + '_chart')}
                     </div>
                 `;
             }
 
-            // Data section - make it collapsible and compact
+            // Data section - UPDATED with copy button
             if (data.result) {
-                const hasMinimalData = isMinimalData(data.result);
-                const isCollapsed = hasMinimalData ? 'collapsed' : '';
-
+                const isActive = !data.plot_data || Object.keys(data.plot_data).length === 0;
                 html += `
-                    <div class="output-section data-section ${isCollapsed}">
-                        <div class="output-section-header clickable" onclick="toggleDataSection(this)">
-                            <i class="fas fa-table"></i> Data Analysis Results
-                            <i class="fas fa-chevron-${hasMinimalData ? 'down' : 'up'} toggle-icon"></i>
+                    <div class="combined-section data-section ${isActive ? 'active' : ''}" id="data_section_${combinedId}">
+                        <div class="data-section-header">
+                            <div class="data-section-title">
+                                <i class="fas fa-table"></i> Data Analysis Results
+                            </div>
+                            <div class="data-section-controls">
+                                <button class="data-copy-btn" onclick="showDataCopyMenu(event, '${combinedId}')" title="Copy Data">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
                         </div>
-                        <div class="output-section-content data-content" style="${hasMinimalData ? 'display: none;' : ''}">
+                        <div class="full-data-content" id="data_content_${combinedId}">
                             ${formatResult(data.result)}
                         </div>
                     </div>
@@ -3438,6 +4086,101 @@
 
             html += '</div>';
             return html;
+        }
+
+        // to handle the toggle between chart and data views
+        function toggleCombinedView(combinedId) {
+            const container = document.getElementById(combinedId);
+            const toggle = document.getElementById(`toggle_${combinedId}`);
+            const chartSection = document.getElementById(`chart_section_${combinedId}`);
+            const dataSection = document.getElementById(`data_section_${combinedId}`);
+            const toggleLabels = container.querySelectorAll('.toggle-label');
+
+            if (toggle.checked) {
+                // Show data, hide chart
+                if (chartSection) {
+                    chartSection.classList.remove('active');
+                }
+                if (dataSection) {
+                    dataSection.classList.add('active');
+                }
+
+                // Update label states
+                toggleLabels.forEach(label => {
+                    if (label.dataset.view === 'data') {
+                        label.classList.add('active');
+                    } else {
+                        label.classList.remove('active');
+                    }
+                });
+            } else {
+                // Show chart, hide data
+                if (chartSection) {
+                    chartSection.classList.add('active');
+                }
+                if (dataSection) {
+                    dataSection.classList.remove('active');
+                }
+
+                // Update label states
+                toggleLabels.forEach(label => {
+                    if (label.dataset.view === 'chart') {
+                        label.classList.add('active');
+                    } else {
+                        label.classList.remove('active');
+                    }
+                });
+            }
+
+            // Resize chart if it becomes visible
+            if (!toggle.checked && chartSection) {
+                setTimeout(() => {
+                    const chartDiv = chartSection.querySelector('[id^="chart_"]');
+                    if (chartDiv && typeof Plotly !== 'undefined' && Plotly.Plots) {
+                        try {
+                            Plotly.Plots.resize(chartDiv);
+                        } catch (error) {
+                            console.log('Chart resize warning:', error);
+                        }
+                    }
+                }, 300);
+            }
+        }
+
+        function toggleCodeDisplay(codeId, button) {
+            const codeContent = document.getElementById(codeId);
+            const isShowing = codeContent.classList.contains('show');
+
+            if (isShowing) {
+                codeContent.classList.remove('show');
+                button.classList.remove('expanded');
+                button.querySelector('span').textContent = 'Show Generated Code';
+            } else {
+                codeContent.classList.add('show');
+                button.classList.add('expanded');
+                button.querySelector('span').textContent = 'Hide Generated Code';
+            }
+        }
+
+        function copyCode(codeId) {
+            const codeElement = document.getElementById(codeId);
+            const codeText = codeElement.querySelector('pre').textContent;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(codeText).then(() => {
+                    showCopyNotification('Code copied to clipboard!');
+                }).catch(() => {
+                    fallbackCopy(codeText);
+                });
+            } else {
+                fallbackCopy(codeText);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Add helper function to detect minimal data
@@ -3538,10 +4281,14 @@
         }
         
         function formatResult(result) {
+            return formatResultRecursive(result, 0);
+        }
+
+        function formatResultRecursive(result, depth = 0) {
             if (typeof result === 'string' || typeof result === 'number') {
                 return `<div class="output-single-value">${result}</div>`;
             }
-            
+
             if (Array.isArray(result)) {
                 if (result.length > 0 && typeof result[0] === 'object') {
                     return formatArrayAsTable(result);
@@ -3549,18 +4296,140 @@
                     return `<div class="output-single-value">${result.join(', ')}</div>`;
                 }
             }
-            
+
             if (typeof result === 'object' && result !== null) {
                 if (isTabularData(result)) {
                     return formatObjectAsTable(result);
                 } else {
-                    return formatObjectAsKeyValue(result);
+                    return formatNestedDictionary(result, depth);
                 }
             }
-            
+
             return `<div class="output-single-value">${JSON.stringify(result)}</div>`;
         }
-        
+
+        function formatNestedDictionary(obj, depth = 0) {
+            const maxDepth = 3; // Prevent infinite nesting
+            if (depth > maxDepth) {
+                return `<div class="output-single-value">${JSON.stringify(obj)}</div>`;
+            }
+
+            const uniqueId = `dict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            let html = '';
+
+            // If it's a top-level dictionary or has many keys, use sections
+            if (depth === 0 || Object.keys(obj).length > 3) {
+                html += '<div class="nested-dictionary">';
+
+                for (const [key, value] of Object.entries(obj)) {
+                    const sectionId = `section_${uniqueId}_${key}`;
+                    const formattedValue = formatDictionaryValue(value, depth + 1);
+                    const isComplex = isComplexValue(value);
+
+                    if (isComplex) {
+                        // Create collapsible section for complex values
+                        html += `
+                            <div class="dictionary-section">
+                                <div class="dictionary-section-header" onclick="toggleDictionarySection('${sectionId}')">
+                                    <i class="fas fa-chevron-right toggle-icon" id="icon_${sectionId}"></i>
+                                    <strong>${escapeHtml(key)}</strong>
+                                    <span class="value-type-badge">${getValueTypeBadge(value)}</span>
+                                </div>
+                                <div class="dictionary-section-content" id="${sectionId}" style="display: none;">
+                                    ${formattedValue}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Show simple values inline
+                        html += `
+                            <div class="dictionary-simple-item">
+                                <strong>${escapeHtml(key)}:</strong> ${formattedValue}
+                            </div>
+                        `;
+                    }
+                }
+
+                html += '</div>';
+            } else {
+                // For small nested objects, use inline table format
+                html += '<table class="output-table nested-table"><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>';
+
+                for (const [key, value] of Object.entries(obj)) {
+                    const formattedValue = formatDictionaryValue(value, depth + 1);
+                    html += `<tr><td><strong>${escapeHtml(key)}</strong></td><td>${formattedValue}</td></tr>`;
+                }
+
+                html += '</tbody></table>';
+            }
+
+            return html;
+        }
+
+        function formatDictionaryValue(value, depth) {
+            if (value === null || value === undefined) {
+                return '<span class="null-value">null</span>';
+            }
+
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                return `<span class="simple-value">${escapeHtml(String(value))}</span>`;
+            }
+
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return '<span class="empty-array">[]</span>';
+                } else if (value.length <= 5 && value.every(item => typeof item !== 'object')) {
+                    // Show small arrays of primitives inline
+                    return `<span class="inline-array">[${value.map(v => escapeHtml(String(v))).join(', ')}]</span>`;
+                } else {
+                    // Use full array formatting for complex arrays
+                    return formatResultRecursive(value, depth);
+                }
+            }
+
+            if (typeof value === 'object') {
+                return formatResultRecursive(value, depth);
+            }
+
+            return `<span class="unknown-value">${escapeHtml(String(value))}</span>`;
+        }
+
+        function isComplexValue(value) {
+            if (Array.isArray(value)) {
+                return value.length > 5 || value.some(item => typeof item === 'object');
+            }
+            if (typeof value === 'object' && value !== null) {
+                return Object.keys(value).length > 2;
+            }
+            return false;
+        }
+
+        function getValueTypeBadge(value) {
+            if (Array.isArray(value)) {
+                return `<span class="type-badge array">${value.length} items</span>`;
+            }
+            if (typeof value === 'object' && value !== null) {
+                const keyCount = Object.keys(value).length;
+                return `<span class="type-badge object">${keyCount} properties</span>`;
+            }
+            return `<span class="type-badge primitive">${typeof value}</span>`;
+        }
+
+        function toggleDictionarySection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const icon = document.getElementById(`icon_${sectionId}`);
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                content.style.display = 'none';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+
         function isTabularData(obj) {
             const keys = Object.keys(obj);
             if (keys.length === 0) return false;
@@ -4961,6 +5830,47 @@
             if (currentFile) {
                 loadCurrentTemplateStatus();
             }
+
+            // Check for shared chart
+            const urlParams = new URLSearchParams(window.location.search);
+            const chartId = urlParams.get('chart');
+
+            if (chartId) {
+                const chartData = sessionStorage.getItem(chartId);
+                if (chartData) {
+                    const { query, plotData, timestamp } = JSON.parse(chartData);
+
+                    // Create a modal or full-screen view for the shared chart
+                    const sharedChartModal = document.createElement('div');
+                    sharedChartModal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.8);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                    `;
+
+                    sharedChartModal.innerHTML = `
+                        <div style="background: white; padding: 20px; border-radius: 10px; width: 90%; height: 90%; position: relative;">
+                            <button onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: #ff5555; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
+                                Close
+                            </button>
+                            <h2>${query}</h2>
+                            <div id="shared_chart" style="width: 100%; height: calc(100% - 60px);"></div>
+                        </div>
+                    `;
+
+                    document.body.appendChild(sharedChartModal);
+
+                    // Render the chart
+                    Plotly.newPlot('shared_chart', plotData.data, plotData.layout || {}, {responsive: true});
+                }
+            }
         });
 
         // Global error recovery - ESC key to reset all stuck states
@@ -5298,6 +6208,175 @@
             }
 
             return outputId;
+        }
+
+        // function to handle copy menu for data sections
+        function showDataCopyMenu(event, combinedId) {
+            event.stopPropagation();
+
+            // Remove existing copy menus
+            document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+
+            const copyMenu = document.createElement('div');
+            copyMenu.className = 'copy-menu';
+            copyMenu.style.left = event.pageX + 'px';
+            copyMenu.style.top = event.pageY + 'px';
+
+            copyMenu.innerHTML = `
+                <div class="copy-menu-item" onclick="copyDataContent('${combinedId}', 'text')">
+                    <i class="fas fa-align-left"></i> Copy as Text
+                </div>
+                <div class="copy-menu-item" onclick="copyDataContent('${combinedId}', 'table')">
+                    <i class="fas fa-table"></i> Copy as Table
+                </div>
+                <div class="copy-menu-item" onclick="copyDataContent('${combinedId}', 'json')">
+                    <i class="fas fa-code"></i> Copy as JSON
+                </div>
+                <div class="copy-menu-item" onclick="copyDataContent('${combinedId}', 'csv')">
+                    <i class="fas fa-file-csv"></i> Copy as CSV
+                </div>
+            `;
+
+            document.body.appendChild(copyMenu);
+
+            // Position menu to stay within viewport
+            const rect = copyMenu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                copyMenu.style.left = (event.pageX - rect.width) + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                copyMenu.style.top = (event.pageY - rect.height) + 'px';
+            }
+        }
+
+        // Add this function to handle copying data content
+        function copyDataContent(combinedId, format) {
+            const dataContent = document.getElementById(`data_content_${combinedId}`);
+            if (!dataContent) {
+                console.error('Data content not found for ID:', combinedId);
+                return;
+            }
+
+            let copyText = '';
+
+            try {
+                switch (format) {
+                    case 'text':
+                        // Get all text content including nested sections
+                        copyText = dataContent.textContent || dataContent.innerText || '';
+                        break;
+
+                    case 'table':
+                        const tables = dataContent.querySelectorAll('.output-table, .nested-table');
+                        if (tables.length > 0) {
+                            copyText = Array.from(tables).map(table => tableToTSV(table)).join('\n\n');
+                        } else {
+                            copyText = dataContent.textContent || dataContent.innerText || '';
+                        }
+                        break;
+
+                    case 'json':
+                        // Try to extract structured data from the content
+                        const structuredData = extractStructuredDataFromContent(dataContent);
+                        copyText = JSON.stringify(structuredData, null, 2);
+                        break;
+
+                    case 'csv':
+                        const csvTables = dataContent.querySelectorAll('.output-table, .nested-table');
+                        if (csvTables.length > 0) {
+                            copyText = Array.from(csvTables).map(table => tableToCSV(table)).join('\n\n');
+                        } else {
+                            // For non-tabular data, create simple CSV format
+                            const textContent = dataContent.textContent || dataContent.innerText || '';
+                            const lines = textContent.split('\n').filter(line => line.trim());
+                            copyText = lines.map(line => `"${line.replace(/"/g, '""')}"`).join('\n');
+                        }
+                        break;
+
+                    default:
+                        copyText = dataContent.textContent || dataContent.innerText || '';
+                }
+
+                // Enhanced copy functionality with better error handling
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(copyText).then(() => {
+                        showCopyNotification('Data copied to clipboard!');
+                        document.querySelectorAll('.copy-menu').forEach(menu => menu.remove());
+                    }).catch(err => {
+                        console.warn('Clipboard API failed, using fallback:', err);
+                        fallbackCopy(copyText);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    fallbackCopy(copyText);
+                }
+
+            } catch (error) {
+                console.error('Error copying data content:', error);
+                // Still try to copy something
+                fallbackCopy(dataContent.textContent || dataContent.innerText || 'Error copying content');
+            }
+        }
+
+        // Helper function to extract structured data from DOM content
+        function extractStructuredDataFromContent(contentElement) {
+            const data = {};
+
+            // Extract data from nested dictionaries
+            const dictSections = contentElement.querySelectorAll('.dictionary-section');
+            dictSections.forEach(section => {
+                const header = section.querySelector('.dictionary-section-header strong');
+                const content = section.querySelector('.dictionary-section-content');
+
+                if (header && content) {
+                    const key = header.textContent.trim();
+
+                    // Try to extract tables first
+                    const tables = content.querySelectorAll('.output-table, .nested-table');
+                    if (tables.length > 0) {
+                        data[key] = extractTableData(tables[0]);
+                    } else {
+                        data[key] = content.textContent.trim();
+                    }
+                }
+            });
+
+            // Extract data from simple items
+            const simpleItems = contentElement.querySelectorAll('.dictionary-simple-item');
+            simpleItems.forEach(item => {
+                const text = item.textContent.trim();
+                const colonIndex = text.indexOf(':');
+                if (colonIndex > 0) {
+                    const key = text.substring(0, colonIndex).trim();
+                    const value = text.substring(colonIndex + 1).trim();
+                    data[key] = value;
+                }
+            });
+
+            // Extract table data if present
+            const mainTables = contentElement.querySelectorAll('.output-table:not(.nested-table)');
+            if (mainTables.length > 0) {
+                data.table_data = extractTableData(mainTables[0]);
+            }
+
+            return Object.keys(data).length > 0 ? data : contentElement.textContent.trim();
+        }
+
+        // Helper function to extract data from tables
+        function extractTableData(table) {
+            const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+            const rows = Array.from(table.querySelectorAll('tbody tr')).map(row => {
+                const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+                if (headers.length > 0) {
+                    const rowData = {};
+                    headers.forEach((header, index) => {
+                        rowData[header] = cells[index] || '';
+                    });
+                    return rowData;
+                }
+                return cells;
+            });
+            return rows;
         }
     </script>
 </body>

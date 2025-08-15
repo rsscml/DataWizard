@@ -3,6 +3,454 @@ Enhanced Prompt templates for the DataAnalysisAgent with comprehensive business 
 advanced visualizations, and predictive modeling capabilities
 """
 
+
+def get_advanced_ml_guide():
+    """Return comprehensive guide for advanced ML algorithms"""
+    return """
+# ADVANCED MACHINE LEARNING ALGORITHMS GUIDE
+
+## 1. XGBOOST
+
+### When to Use XGBoost
+- **Best for**: Structured/tabular data, competitions, high accuracy requirements
+- **Strength**: Handles missing values, feature importance, regularization
+- **Use cases**: Sales forecasting, customer churn, risk assessment, demand planning
+
+### XGBoost Implementation Patterns
+```python
+# Regression Example
+def xgboost_regression(X, y, optimize_params=True):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    if optimize_params:
+        # Use automated hyperparameter optimization
+        optimization_result = advanced_ml_optimize(X_train, y_train, 'xgboost', 'regression')
+        model = optimization_result['best_model']
+    else:
+        # Default parameters
+        model = xgb.XGBRegressor(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            random_state=42
+        )
+        model.fit(X_train, y_train)
+
+    # Predictions and evaluation
+    y_pred = model.predict(X_test)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+
+    # Feature importance
+    feature_importance = pd.DataFrame({
+        'feature': X.columns,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
+
+    return {
+        'model': model,
+        'rmse': rmse,
+        'r2_score': r2,
+        'feature_importance': feature_importance,
+        'predictions': y_pred
+    }
+
+# Classification Example
+def xgboost_classification(X, y, optimize_params=True):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    if optimize_params:
+        optimization_result = advanced_ml_optimize(X_train, y_train, 'xgboost', 'classification')
+        model = optimization_result['best_model']
+    else:
+        model = xgb.XGBClassifier(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            random_state=42
+        )
+        model.fit(X_train, y_train)
+
+    # Predictions and evaluation
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average='weighted')
+    recall = recall_score(y_test, y_pred, average='weighted')
+
+    return {
+        'model': model,
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall': recall,
+        'predictions': y_pred,
+        'probabilities': y_proba
+    }
+```
+
+### XGBoost Business Applications
+```python
+# Sales Forecasting with XGBoost
+def sales_forecasting_xgboost(data, date_col, sales_col, external_features=[]):
+    # Create time-based features
+    data = data.copy()
+    data[date_col] = pd.to_datetime(data[date_col])
+    data = data.sort_values(date_col)
+
+    # Lag features
+    data['sales_lag_1'] = data[sales_col].shift(1)
+    data['sales_lag_7'] = data[sales_col].shift(7)
+    data['sales_lag_30'] = data[sales_col].shift(30)
+
+    # Rolling features
+    data['sales_rolling_7'] = data[sales_col].rolling(7).mean()
+    data['sales_rolling_30'] = data[sales_col].rolling(30).mean()
+
+    # Date features
+    data['month'] = data[date_col].dt.month
+    data['quarter'] = data[date_col].dt.quarter
+    data['day_of_week'] = data[date_col].dt.dayofweek
+    data['is_weekend'] = data['day_of_week'].isin([5, 6]).astype(int)
+
+    # Prepare features
+    feature_cols = ['sales_lag_1', 'sales_lag_7', 'sales_lag_30', 'sales_rolling_7', 
+                    'sales_rolling_30', 'month', 'quarter', 'day_of_week', 'is_weekend'] + external_features
+
+    clean_data = data.dropna()
+    X = clean_data[feature_cols]
+    y = clean_data[sales_col]
+
+    return xgboost_regression(X, y, optimize_params=True)
+```
+
+## 2. LIGHTGBM (LIGHT GRADIENT BOOSTING MACHINE)
+
+### When to Use LightGBM
+- **Best for**: Large datasets, fast training, memory efficiency
+- **Strength**: Faster than XGBoost, handles categorical features natively
+- **Use cases**: Real-time predictions, large-scale analytics, categorical-heavy data
+
+### LightGBM Implementation
+```python
+def lightgbm_analysis(X, y, problem_type='regression', categorical_features=None):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    if problem_type == 'regression':
+        model = lgb.LGBMRegressor(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            num_leaves=31,
+            feature_fraction=0.8,
+            bagging_fraction=0.8,
+            random_state=42,
+            verbose=-1
+        )
+        model.fit(X_train, y_train, categorical_feature=categorical_features)
+
+        y_pred = model.predict(X_test)
+        performance = {
+            'rmse': np.sqrt(mean_squared_error(y_test, y_pred)),
+            'r2_score': r2_score(y_test, y_pred)
+        }
+    else:  # classification
+        model = lgb.LGBMClassifier(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            random_state=42,
+            verbose=-1
+        )
+        model.fit(X_train, y_train, categorical_feature=categorical_features)
+
+        y_pred = model.predict(X_test)
+        performance = {
+            'accuracy': accuracy_score(y_test, y_pred),
+            'precision': precision_score(y_test, y_pred, average='weighted'),
+            'recall': recall_score(y_test, y_pred, average='weighted')
+        }
+
+    return {
+        'model': model,
+        'performance': performance,
+        'feature_importance': pd.DataFrame({
+            'feature': X.columns,
+            'importance': model.feature_importances_
+        }).sort_values('importance', ascending=False)
+    }
+```
+
+## 3. CATBOOST (CATEGORICAL BOOSTING)
+
+### When to Use CatBoost
+- **Best for**: High categorical cardinality, automatic feature engineering
+- **Strength**: Handles categories without encoding, overfitting resistant
+- **Use cases**: Customer segmentation, recommendation systems, text-heavy data
+
+### CatBoost Implementation
+```python
+def catboost_analysis(X, y, categorical_features=None, problem_type='regression'):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    if problem_type == 'regression':
+        model = cb.CatBoostRegressor(
+            iterations=100,
+            depth=6,
+            learning_rate=0.1,
+            random_seed=42,
+            verbose=False
+        )
+    else:
+        model = cb.CatBoostClassifier(
+            iterations=100,
+            depth=6,
+            learning_rate=0.1,
+            random_seed=42,
+            verbose=False
+        )
+
+    # CatBoost can handle categorical features automatically
+    model.fit(X_train, y_train, cat_features=categorical_features)
+
+    y_pred = model.predict(X_test)
+
+    # Get feature importance
+    feature_importance = pd.DataFrame({
+        'feature': X.columns,
+        'importance': model.get_feature_importance()
+    }).sort_values('importance', ascending=False)
+
+    return {
+        'model': model,
+        'predictions': y_pred,
+        'feature_importance': feature_importance
+    }
+```
+
+## 4. ADVANCED TIME SERIES FORECASTING
+
+### Prophet for Business Forecasting
+```python
+def prophet_business_forecasting(data, date_col, value_col, periods=30, include_holidays=True):
+    # Use the advanced forecasting function
+    forecasts = advanced_ml_forecast(data, date_col, value_col, periods)
+
+    if 'Prophet' in forecasts:
+        prophet_result = forecasts['Prophet']
+        forecast_df = prophet_result['forecast']
+        model = prophet_result['model']
+
+        # Business insights
+        trend_direction = 'increasing' if forecast_df['yhat'].iloc[-1] > forecast_df['yhat'].iloc[0] else 'decreasing'
+
+        # Seasonal patterns
+        components = prophet_result.get('components', pd.DataFrame())
+
+        return {
+            'forecast': forecast_df,
+            'trend_direction': trend_direction,
+            'seasonal_patterns': components,
+            'model_summary': f"Prophet model with {trend_direction} trend",
+            'business_insights': [
+                f"Forecast shows {trend_direction} trend over {periods} periods",
+                f"Confidence interval range: {forecast_df['yhat_upper'].mean() - forecast_df['yhat_lower'].mean():.2f}"
+            ]
+        }
+    else:
+        return {'error': 'Prophet forecasting not available'}
+
+# Multi-method Time Series Ensemble
+def ensemble_time_series_forecast(data, date_col, value_col, periods=30):
+    # Get forecasts from multiple methods
+    all_forecasts = advanced_ml_forecast(data, date_col, value_col, periods)
+
+    # Combine forecasts using simple averaging
+    forecast_methods = [method for method in all_forecasts.keys() if 'error' not in all_forecasts[method]]
+
+    if len(forecast_methods) > 1:
+        ensemble_forecast = []
+        forecast_dates = None
+
+        for method in forecast_methods:
+            method_forecast = all_forecasts[method]['forecast']
+            if forecast_dates is None:
+                forecast_dates = method_forecast['ds'] if 'ds' in method_forecast.columns else method_forecast.index
+
+            forecast_values = method_forecast['yhat'] if 'yhat' in method_forecast.columns else method_forecast.iloc[:, 1]
+            ensemble_forecast.append(forecast_values)
+
+        # Average forecasts
+        ensemble_values = np.mean(ensemble_forecast, axis=0)
+
+        return {
+            'ensemble_forecast': pd.DataFrame({
+                'date': forecast_dates,
+                'ensemble_prediction': ensemble_values
+            }),
+            'individual_forecasts': all_forecasts,
+            'methods_used': forecast_methods,
+            'ensemble_method': 'simple_average'
+        }
+    else:
+        return all_forecasts
+```
+
+## 5. AUTOMATED HYPERPARAMETER OPTIMIZATION
+
+### Using Optuna for Optimization
+```python
+def optimize_model_automatically(X, y, model_types=['xgboost', 'lightgbm'], problem_type='regression'):
+    # Compare multiple optimized models
+    results = {}
+
+    for model_type in model_types:
+        optimization_result = advanced_ml_optimize(X, y, model_type, problem_type)
+
+        if 'error' not in optimization_result:
+            results[model_type] = {
+                'best_model': optimization_result['best_model'],
+                'best_score': optimization_result['best_score'],
+                'best_params': optimization_result['best_params'],
+                'optimization_history': optimization_result['optimization_history']
+            }
+
+    # Find best performing model
+    if results:
+        best_model_type = max(results.keys(), key=lambda x: results[x]['best_score'])
+        best_model = results[best_model_type]['best_model']
+
+        return {
+            'best_model': best_model,
+            'best_model_type': best_model_type,
+            'all_results': results,
+            'performance_comparison': {model: results[model]['best_score'] for model in results}
+        }
+    else:
+        return {'error': 'No models could be optimized'}
+```
+
+## 6. MODEL EXPLAINABILITY
+
+### SHAP and LIME Explanations
+```python
+def explain_model_predictions(model, X_train, X_test, feature_names, explain_instances=5):
+    # Use the advanced explainability function
+    explanations = advanced_ml_explain(model, X_train, X_test, feature_names)
+
+    if 'error' not in explanations:
+        # Format for business consumption
+        business_insights = []
+
+        # SHAP insights
+        if 'shap' in explanations:
+            shap_importance = explanations['shap']['feature_importance']
+            top_features = sorted(shap_importance.items(), key=lambda x: x[1], reverse=True)[:5]
+
+            business_insights.append("Top 5 Most Important Features (SHAP Analysis):")
+            for feature, importance in top_features:
+                business_insights.append(f"  - {feature}: {importance:.4f}")
+
+        # LIME insights
+        if 'lime' in explanations:
+            lime_explanations = explanations['lime']['explanations']
+            business_insights.append(f"\\nLocal Explanations for {len(lime_explanations)} instances:")
+
+            for i, lime_exp in enumerate(lime_explanations):
+                business_insights.append(f"  Instance {i+1}: Top factors")
+                for feature, weight in lime_exp['explanation'][:3]:
+                    direction = "increases" if weight > 0 else "decreases" 
+                    business_insights.append(f"    - {feature} {direction} prediction by {abs(weight):.3f}")
+
+        return {
+            'explanations': explanations,
+            'business_insights': business_insights,
+            'summary': "Model explanations provide insights into feature importance and prediction drivers"
+        }
+    else:
+        return explanations
+```
+
+## 7. ANOMALY DETECTION
+
+### Comprehensive Anomaly Detection
+```python
+def detect_business_anomalies(data, contamination=0.1, methods=['isolation_forest', 'lof']):
+    # Use the advanced anomaly detection function
+    anomaly_results = advanced_ml_anomaly(data, contamination)
+
+    if 'error' not in anomaly_results:
+        # Business interpretation
+        business_summary = []
+
+        if 'Consensus' in anomaly_results:
+            consensus = anomaly_results['Consensus']
+            business_summary.append(f"Detected {consensus['outliers_count']} consensus anomalies ({consensus['outlier_percentage']:.2f}% of data)")
+
+        # Method comparison
+        for method, results in anomaly_results.items():
+            if method != 'Consensus' and method != 'data_with_outliers':
+                business_summary.append(f"{method}: {results['outliers_count']} anomalies ({results['outlier_percentage']:.2f}%)")
+
+        # Get anomalous records
+        if 'data_with_outliers' in anomaly_results:
+            data_with_flags = anomaly_results['data_with_outliers']
+            consensus_anomalies = data_with_flags[data_with_flags.get('Consensus_outlier', 0) == 1]
+
+            return {
+                'summary': business_summary,
+                'anomaly_results': anomaly_results,
+                'consensus_anomalies': consensus_anomalies,
+                'total_anomalies': len(consensus_anomalies) if not consensus_anomalies.empty else 0
+            }
+        else:
+            return {
+                'summary': business_summary,
+                'anomaly_results': anomaly_results
+            }
+    else:
+        return anomaly_results
+```
+
+CRITICAL ADVANCED ML RULES:
+
+1. **Model Selection Guidelines**:
+   - XGBoost: High accuracy, competition-grade results
+   - LightGBM: Large datasets, speed requirements
+   - CatBoost: High-cardinality categorical data
+   - Prophet: Business time series with seasonality
+
+2. **Hyperparameter Optimization**:
+   - Always use optimization for production models
+   - Set reasonable trial limits (50-200 trials)
+   - Use cross-validation for robust evaluation
+
+3. **Model Explainability**:
+   - Always explain model predictions for business stakeholders
+   - Use SHAP for global importance, LIME for local explanations
+   - Translate technical insights into business language
+
+4. **Time Series Best Practices**:
+   - Use multiple forecasting methods when possible
+   - Validate on out-of-sample data
+   - Consider business cycles and seasonality
+   - Apply ensemble methods for robustness
+
+5. **Anomaly Detection Applications**:
+   - Fraud detection: Financial transactions
+   - Quality control: Manufacturing processes  
+   - System monitoring: IT operations
+   - Customer behavior: Marketing analytics
+
+6. **Performance Monitoring**:
+   - Track model performance over time
+   - Detect data drift in production
+   - Retrain models when performance degrades
+   - Maintain model versioning and rollback capabilities
+"""
+
 def get_comprehensive_visualization_guide():
     """Return comprehensive guide for business analytics visualizations"""
     return """
@@ -2191,7 +2639,8 @@ CRITICAL: Use ONLY these exact column names. Never use placeholders or generic n
     pandas_safety_guide = get_pandas_safety_guide()
     predictive_modeling_guide = get_predictive_modeling_guide()
     statistics_guide = get_statistics_guide()
-   
+    advanced_ml_guide = get_advanced_ml_guide()
+
     return f"""
 You are an advanced business analytics assistant proficient in Python Programming, Statistics & Machine Learning.
 You have deep domain knowledge of various corporate functions like finance, operations, marketing, supply chain and strategy.
@@ -2220,6 +2669,8 @@ Here are some key code generation guides to help you in your task.
 {predictive_modeling_guide}
 
 {statistics_guide}
+
+{advanced_ml_guide}
 
 CRITICAL IMPORT RULES - NEVER IMPORT ANYTHING:
 - ALL required functions are pre-imported and available
@@ -2330,6 +2781,43 @@ CRITICAL EXECUTION RULES:
 - NEVER show results in complex python formats like dictionary or json! Charts and/or tables or lists are always preferable
 - Apply business intelligence best practices throughout
 
+CRITICAL RESULT ASSIGNMENT RULES:
+1. ALWAYS assign meaningful results to variables, NEVER use print() for final results:
+   CORRECT:
+   result = summary_stats
+   result = correlation_matrix
+   result = top_customers.head(10)
+   
+   INCORRECT:
+   result = print("Analysis complete")
+   result = print(summary_stats)
+   print(correlation_matrix)  # without assignment
+
+2. PRIORITIZE data objects over text summaries:
+   PREFER: result = filtered_data
+   AVOID: result = "Found 50 records"
+
+3. NEVER end with print statements:
+   INCORRECT:
+   ```python 
+   df.groupby('category').sum().plot()
+   result = print("Chart created")
+   ```
+   CORRECT:
+   ```python
+   grouped_data = df.groupby('category').sum()
+   fig = px.bar(grouped_data.reset_index(), x='category', y='sales')
+   result = grouped_data
+    ```
+    
+4. Use descriptive variable names for intermediate steps:
+   For e.g.,
+   ```python
+   analysis_summary = current_data.groupby('category')['value_col'].agg(['sum', 'mean', 'std])
+   result = analysis_summary
+   ```
+   
+REMEMBER: The 'result' variable will be displayed to the user, so make it meaningful!
 Generate Python code that produces actionable business insights using advanced analytics.
 Only return the Python code, no explanations.
 """

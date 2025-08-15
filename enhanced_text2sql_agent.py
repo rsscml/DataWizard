@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
+from llm_factory import create_universal_llm, LLMConfig
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -81,11 +82,10 @@ class EnhancedText2SQLAgent:
         self.error_classifiers = self._initialize_error_classifiers()
         
     def _initialize_llm(self):
-        """Initialize LLM using existing infrastructure from agent.py"""
+        """Initialize LLM using universal factory"""
         try:
-            from agent import create_langchain_llm_with_auto_refresh
-            self.llm = create_langchain_llm_with_auto_refresh()
-            logger.info("Enhanced Text2SQL agent initialized with auto-refresh LLM")
+            self.llm = create_universal_llm()
+            logger.info("Enhanced Text2SQL agent initialized with universal LLM")
         except Exception as e:
             logger.error(f"Failed to initialize LLM for Enhanced Text2SQL: {e}")
             raise
@@ -657,10 +657,9 @@ Now generate the SQL query for the user's question, incorporating all error corr
         raise Exception("Max retries exceeded for LLM invocation")
     
     def _reinitialize_llm(self):
-        """Reinitialize LLM connection (same as original)"""
+        """Reinitialize LLM connection"""
         try:
-            from agent import create_langchain_llm_with_auto_refresh
-            self.llm = create_langchain_llm_with_auto_refresh()
+            self.llm = create_universal_llm()
         except Exception as e:
             logger.error(f"Failed to reinitialize LLM: {e}")
             raise

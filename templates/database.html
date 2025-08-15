@@ -1716,6 +1716,65 @@
         .step-badge.failed {
             background: linear-gradient(135deg, #FF544F 0%, #ff3c36 100%);
         }
+
+        /* Code toggle functionality */
+        .code-section {
+            transition: all 0.3s ease;
+        }
+
+        .code-section.hidden {
+            display: none;
+        }
+
+        .code-toggle-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+            min-width: auto;
+        }
+
+        .code-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .code-toggle-btn.active {
+            background: rgba(255, 193, 7, 0.8);
+            color: #856404;
+        }
+
+        /* Code section header styling */
+        .code-section-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-section-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .code-section-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -2253,14 +2312,14 @@
                             contextBadge = ' 🧠'; // Comprehensive context
                             contextTooltip = 'Comprehensive context available';
                         } else if (contextScore >= 2) {
-                            contextBadge = ' ⚡'; // Good context
+                            contextBadge = ' 🧠'; // Good context
                             contextTooltip = 'Good context available';
                         } else {
-                            contextBadge = ' ⚠️'; // Basic context
+                            contextBadge = ' '; // Basic context
                             contextTooltip = 'Basic context available';
                         }
                     } else {
-                        contextBadge = ' ❌'; // No context
+                        contextBadge = ' ⚠️'; // No context
                         contextTooltip = 'No supplemental context';
                     }
 
@@ -2876,6 +2935,9 @@
                         </div>
                     </div>
                     <div class="stacked-output-controls">
+                        ${output.data.code ? `<button class="stacked-output-btn" onclick="toggleAllCodeInCard('stacked_${outputId}')" title="Toggle Code">
+                            <i class="fas fa-code"></i>
+                        </button>` : ''}
                         <button class="stacked-output-btn" onclick="copyStackedOutput('${outputId}')" title="Copy">
                             <i class="fas fa-copy"></i>
                         </button>
@@ -2994,6 +3056,9 @@
                         <button class="output-card-btn copy-btn" onclick="showCopyMenu(event, '${outputId}')" title="Copy">
                             <i class="fas fa-copy"></i>
                         </button>
+                        ${data.code ? `<button class="output-card-btn code-toggle-btn" onclick="toggleAllCodeInCard('${outputId}')" title="Toggle Code Visibility">
+                            <i class="fas fa-code"></i>
+                        </button>` : ''}
                         <button class="output-card-btn" onclick="minimizeOutputCard('${outputId}')" title="Minimize">
                             <i class="fas fa-minus"></i>
                         </button>
@@ -3082,10 +3147,7 @@
             }
             // Handle code with result
             else if (data.code) {
-                mainContent = '<div class="output-code-block"><strong>Generated Code:</strong><br><pre>' + data.code + '</pre></div>';
-                if (data.result) {
-                    mainContent += formatResult(data.result);
-                }
+                mainContent = formatCodeWithResult(data);
             }
             // Handle result only
             else if (data.result) {
@@ -3099,6 +3161,114 @@
             const insightsSection = formatInsightsSection(data);
 
             return mainContent + insightsSection;
+        }
+
+        function formatCodeWithResult(data) {
+            const codeId = `code_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            let html = '<div class="combined-output">';
+
+            // Code section with toggle (hidden by default)
+            html += `
+                <div class="output-section">
+                    <div class="code-section-header">
+                        <div>
+                            <i class="fas fa-code"></i> Generated Code
+                        </div>
+                        <button class="code-section-toggle" onclick="toggleCodeVisibility('${codeId}')">
+                            <i class="fas fa-eye"></i> Show
+                        </button>
+                    </div>
+                    <div class="code-section hidden" id="${codeId}">
+                        <div class="output-code-block">
+                            <pre>${data.code}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Result section
+            if (data.result) {
+                html += `
+                    <div class="output-section">
+                        <div class="output-section-header">
+                            <i class="fas fa-table"></i> Results
+                        </div>
+                        <div class="output-section-content">
+                            ${formatResult(data.result)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function toggleCodeVisibility(codeId) {
+            const codeSection = document.getElementById(codeId);
+            const toggleButton = document.querySelector(`[onclick="toggleCodeVisibility('${codeId}')"]`);
+
+            if (!codeSection || !toggleButton) return;
+
+            if (codeSection.classList.contains('hidden')) {
+                // Show code
+                codeSection.classList.remove('hidden');
+                toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i> Hide';
+                toggleButton.classList.add('active');
+            } else {
+                // Hide code
+                codeSection.classList.add('hidden');
+                toggleButton.innerHTML = '<i class="fas fa-eye"></i> Show';
+                toggleButton.classList.remove('active');
+            }
+        }
+
+        function toggleAllCodeInCard(outputId) {
+            const card = document.getElementById(outputId);
+            if (!card) return;
+
+            const codeSections = card.querySelectorAll('.code-section');
+            const toggleButton = card.querySelector('.code-toggle-btn');
+
+            if (codeSections.length === 0) return;
+
+            // Check if any code sections are currently visible
+            const hasVisibleCode = Array.from(codeSections).some(section => !section.classList.contains('hidden'));
+
+            codeSections.forEach(codeSection => {
+                const codeId = codeSection.id;
+                const sectionToggleButton = card.querySelector(`[onclick="toggleCodeVisibility('${codeId}')"]`);
+
+                if (hasVisibleCode) {
+                    // Hide all code
+                    codeSection.classList.add('hidden');
+                    if (sectionToggleButton) {
+                        sectionToggleButton.innerHTML = '<i class="fas fa-eye"></i> Show';
+                        sectionToggleButton.classList.remove('active');
+                    }
+                } else {
+                    // Show all code
+                    codeSection.classList.remove('hidden');
+                    if (sectionToggleButton) {
+                        sectionToggleButton.innerHTML = '<i class="fas fa-eye-slash"></i> Hide';
+                        sectionToggleButton.classList.add('active');
+                    }
+                }
+            });
+
+            // Update the main toggle button
+            if (toggleButton) {
+                if (hasVisibleCode) {
+                    toggleButton.innerHTML = '<i class="fas fa-code"></i>';
+                    toggleButton.classList.remove('active');
+                    toggleButton.title = 'Show Code';
+                } else {
+                    toggleButton.innerHTML = '<i class="fas fa-code"></i>';
+                    toggleButton.classList.add('active');
+                    toggleButton.title = 'Hide Code';
+                }
+            }
         }
 
         function formatInsightsSection(data) {

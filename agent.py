@@ -21,6 +21,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.utils import PlotlyJSONEncoder
 
+#from llm_factory import create_universal_llm, UniversalLLMFactory, LLMConfig
+try:
+    from llm_factory import create_universal_llm, UniversalLLMFactory, LLMConfig, LLMProvider
+    UNIVERSAL_LLM_AVAILABLE = True
+except ImportError as e:
+    print(f"Universal LLM factory not available: {e}")
+    UNIVERSAL_LLM_AVAILABLE = False
+
 # LangChain and LangGraph imports
 from langchain_openai import AzureChatOpenAI
 from langchain.schema import SystemMessage
@@ -52,12 +60,13 @@ try:
                                  roc_auc_score, roc_curve, confusion_matrix, classification_report,
                                  silhouette_score, davies_bouldin_score)
     from sklearn.decomposition import PCA, TruncatedSVD
-    from sklearn.feature_selection import SelectKBest, f_classif, f_regression, RFE
+    from sklearn.feature_selection import SelectKBest, f_classif, f_regression, RFE, mutual_info_regression, mutual_info_classif
     from sklearn.svm import SVC, SVR
     from sklearn.naive_bayes import GaussianNB
     from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
     from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
     SKLEARN_AVAILABLE = True
+    print("sklearn imports completed successfully!")
 except ImportError:
     SKLEARN_AVAILABLE = False
 
@@ -68,11 +77,12 @@ try:
                              chi2_contingency, fisher_exact, kstest, shapiro, normaltest,
                              anderson, levene, bartlett, f_oneway, zscore, boxcox,
                              probplot, rankdata, trim_mean, kurtosis, skew, mode,
-                             entropy, mutual_info_score, pointbiserialr)
+                             entropy, pointbiserialr)
     from scipy.signal import find_peaks, savgol_filter, butter, filtfilt, welch
     from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
     from scipy.spatial.distance import euclidean, cosine, correlation
     SCIPY_AVAILABLE = True
+    print("scipy imports completed successfully!")
 except ImportError:
     SCIPY_AVAILABLE = False
 
@@ -92,6 +102,7 @@ try:
     from statsmodels.tsa.filters.hp_filter import hpfilter
     from statsmodels.tsa.filters.cf_filter import cffilter
     STATSMODELS_AVAILABLE = True
+    print("statsmodels imports completed successfully!")
 except ImportError:
     STATSMODELS_AVAILABLE = False
 
@@ -102,6 +113,61 @@ try:
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
+
+# Import advanced ML libraries
+try:
+    import xgboost as xgb
+    import lightgbm as lgb
+    import catboost as cb
+    ADVANCED_ML_AVAILABLE = True
+except ImportError:
+    ADVANCED_ML_AVAILABLE = False
+
+try:
+    import pycaret
+    from pycaret.regression import *
+    from pycaret.classification import *
+    from pycaret.time_series import *
+    PYCARET_AVAILABLE = True
+except ImportError:
+    PYCARET_AVAILABLE = False
+
+try:
+    from prophet import Prophet
+    PROPHET_AVAILABLE = True
+except ImportError:
+    PROPHET_AVAILABLE = False
+
+try:
+    import shap
+    import lime
+    from lime.lime_tabular import LimeTabularExplainer
+    EXPLAINABILITY_AVAILABLE = True
+except ImportError:
+    EXPLAINABILITY_AVAILABLE = False
+
+try:
+    import category_encoders as ce
+    from feature_engine.selection import SelectByShuffling
+    from feature_engine.creation import MathematicalCombination
+    FEATURE_ENG_AVAILABLE = True
+except ImportError:
+    FEATURE_ENG_AVAILABLE = False
+
+try:
+    import optuna
+    OPTUNA_AVAILABLE = True
+except ImportError:
+    OPTUNA_AVAILABLE = False
+
+try:
+    from pyod.models.iforest import IForest
+    from pyod.models.lof import LOF
+    from pyod.models.knn import KNN
+    from pyod.models.ocsvm import OCSVM
+    ANOMALY_DETECTION_AVAILABLE = True
+except ImportError:
+    ANOMALY_DETECTION_AVAILABLE = False
 
 from prompts import get_code_generation_prompt
 
@@ -1241,24 +1307,108 @@ def initialize_token_manager():
     
     return token_manager
 
+# new create_langchain_llm_with_auto_refresh function
 def create_langchain_llm_with_auto_refresh(endpoint_path="/openai4/az_openai_gpt-4o_chat"):
-    """Create LangChain LLM with automatic token refresh capability"""
+    """Create LangChain LLM with automatic token refresh capability
+
+    This function now supports multiple LLM providers through the universal factory,
+    with fallback to the original Azure OpenAI implementation.
+    """
     global http_client
-    
+
     config = get_global_config()
     logger = get_global_logger()
     operation = "llm_creation"
-    
+
     try:
         logger.log_operation_start(operation, {"endpoint": endpoint_path})
-        
+
+        # ATTEMPT 1: Try using the universal LLM factory if available
+        if UNIVERSAL_LLM_AVAILABLE:
+            try:
+                # Check which provider is configured
+                llm_config = LLMConfig.from_env()
+                provider_name = llm_config.provider.value
+
+                logger.log_operation_start(f"{operation}_universal", {
+                    "provider": provider_name,
+                    "model": llm_config.model_name
+                })
+
+                # For Azure OpenAI, pass the token manager and http client
+                if llm_config.provider == LLMProvider.AZURE_OPENAI:
+                    # Initialize token manager if needed
+                    tm = initialize_token_manager()
+
+                    # Create or get http_client
+                    if http_client is None or (hasattr(http_client, '_client') and http_client._client.is_closed):
+                        if http_client:
+                            http_client.close()
+
+                        http_client = AutoRefreshHTTPClient(
+                            token_manager=tm,
+                            subscription_key=subs_key,
+                            llm_endpoint=endpoint_path,
+                            config=config,
+                            logger=logger
+                        )
+
+                    # Use universal factory with Azure-specific components
+                    llm = create_universal_llm(endpoint_path)
+                else:
+                    # For other providers (Claude, OpenAI, Gemini)
+                    llm = create_universal_llm(endpoint_path)
+
+                # Validate that we got a valid LLM
+                if llm is None:
+                    raise ValueError(f"Universal LLM factory returned None for provider {provider_name}")
+
+                # Test the LLM with a simple ping to ensure it's working
+                try:
+                    from langchain.schema import SystemMessage, HumanMessage
+
+                    # Use HumanMessage for Claude compatibility, SystemMessage for others
+                    try:
+                        # Try to detect if this is Claude by checking the provider
+                        llm_config = LLMConfig.from_env()
+                        if llm_config.provider == LLMProvider.CLAUDE:
+                            test_response = llm.invoke([HumanMessage(content="Respond with 'OK'")])
+                        else:
+                            test_response = llm.invoke([SystemMessage(content="ping")])
+                    except Exception:
+                        # Fallback: always use HumanMessage if provider detection fails
+                        test_response = llm.invoke([HumanMessage(content="Respond with 'OK'")])
+
+                    if test_response is None:
+                        raise ValueError("LLM test invocation returned None")
+                except Exception as test_error:
+                    print(f"LLM test invocation failed: {test_error}")
+                    # Don't fail here - let it fail later if there's really an issue
+
+                logger.log_operation_success(operation, details={
+                    "method": "universal",
+                    "provider": provider_name
+                })
+
+                return llm
+
+            except Exception as universal_error:
+                print(f"Universal LLM creation failed, will try fallback: {universal_error}")
+                # Continue to fallback
+
+        # ATTEMPT 2: Fallback to original Azure OpenAI implementation
+        print("Using original Azure OpenAI implementation (fallback)")
+
         # Initialize token manager
         tm = initialize_token_manager()
-        
+
         # Create auto-refresh HTTP client
         if http_client:
-            http_client.close()  # Close previous client if exists
-        
+            try:
+                http_client.close()  # Close previous client if exists
+            except:
+                pass
+
         http_client = AutoRefreshHTTPClient(
             token_manager=tm,
             subscription_key=subs_key,
@@ -1266,13 +1416,13 @@ def create_langchain_llm_with_auto_refresh(endpoint_path="/openai4/az_openai_gpt
             config=config,
             logger=logger
         )
-        
+
         # Set OpenAI base URL
         openai.api_base = openai_base_url
-        
+
         # Get initial token
         initial_token = tm.get_valid_token()
-        
+
         # Create LangChain LLM with auto-refresh HTTP client
         llm = AzureChatOpenAI(
             azure_endpoint=f"{openai.api_base}{endpoint_path}",
@@ -1287,15 +1437,20 @@ def create_langchain_llm_with_auto_refresh(endpoint_path="/openai4/az_openai_gpt
             http_client=http_client.get_client(),
             max_retries=config.llm_max_retries,
         )
-        
-        logger.log_operation_success(operation)
+
+        logger.log_operation_success(operation, details={
+            "method": "fallback_azure",
+            "provider": "azure_openai"
+        })
+
         return llm
-        
+
     except Exception as e:
+        logger.log_error(e, operation)
         raise AgentError(
             f"Failed to create LLM: {e}",
             ErrorCategory.SYSTEM,
-            {"endpoint": endpoint_path},
+            {"endpoint": endpoint_path, "method": "all_attempts_failed"},
             e
         )
 
@@ -1349,7 +1504,13 @@ class DataAnalysisAgent:
         self.scipy_available = SCIPY_AVAILABLE
         self.statsmodels_available = STATSMODELS_AVAILABLE
         self.matplotlib_available = MATPLOTLIB_AVAILABLE
-        
+        self.advanced_ml_available = ADVANCED_ML_AVAILABLE
+        self.prophet_available = PROPHET_AVAILABLE
+        self.anomaly_detection_available = ANOMALY_DETECTION_AVAILABLE
+        self.explainability_available = EXPLAINABILITY_AVAILABLE
+        self.optuna_available = OPTUNA_AVAILABLE
+        self.pycaret_available = PYCARET_AVAILABLE
+
         # Initialize data format analyzers with configuration
         self.format_analyzer = DataFormatAnalyzer(self.config, self.logger)
 
@@ -1362,18 +1523,47 @@ class DataAnalysisAgent:
             "wide_format_detection": True,
             "commentary_generation": self.config.enable_commentary
         })
-    
+
     def refresh_llm_connection(self):
         """Manually refresh the LLM connection (useful for long-running agents)"""
+        global token_manager, http_client
         operation = "llm_refresh"
         try:
             self.logger.log_operation_start(operation)
-            # Force refresh the token manager
-            global token_manager
+
+            # Check if we're using universal LLM
+            if UNIVERSAL_LLM_AVAILABLE:
+                try:
+                    llm_config = LLMConfig.from_env()
+                    provider_name = llm_config.provider.value
+
+                    # For Azure OpenAI, force refresh the token
+                    if llm_config.provider == LLMProvider.AZURE_OPENAI:
+                        if token_manager:
+                            token_manager.force_refresh()
+                            self.logger.log_operation_success("token_refresh")
+
+                    # For all providers, recreate the LLM
+                    self.llm = create_langchain_llm_with_auto_refresh()
+
+                    self.logger.log_operation_success(operation, details={
+                        "provider": provider_name,
+                        "method": "universal"
+                    })
+                    return
+
+                except Exception as universal_error:
+                    self.logger.log_operation_warning(operation, f"Universal LLM refresh failed, trying fallback: {universal_error}")
+
+            # Fallback: Original Azure OpenAI refresh
             if token_manager:
                 token_manager.force_refresh()
+
             self.llm = create_langchain_llm_with_auto_refresh()
-            self.logger.log_operation_success(operation)
+            self.logger.log_operation_success(operation, details={
+                "method": "fallback_azure"
+            })
+
         except Exception as e:
             self.logger.log_error(e, operation)
             raise AgentError(
@@ -1864,7 +2054,7 @@ INSIGHTS:
 - [Insight 3: Actionable takeaways or business implication. Break this down into multiple lines if needed.] (optional)
 - [Insight 4: Any other insight]
 
-Keep each insight to one sentence. Focus on business value and actionable observations.
+Focus on actionable observations, hidden connections & interesting facts & factoids pertinent to the data & output. Do not make generic statements. 
 """
 
         return prompt
@@ -2408,35 +2598,58 @@ WORKSHEET MERGING:
             error_response = self.error_handler.handle_error(e, operation)
             state['error'] = error_response['message']
             return state
-    
+
     def _invoke_llm_with_retry(self, messages, max_retries=None):
         """Invoke LLM with retry logic for authentication failures"""
         max_retries = max_retries or self.config.llm_max_retries
         operation = "llm_invocation"
-        
+
+        # Determine which provider we're using
+        provider_type = "azure_openai"  # default
+        if UNIVERSAL_LLM_AVAILABLE:
+            try:
+                llm_config = LLMConfig.from_env()
+                provider_type = llm_config.provider.value
+            except:
+                pass
+
         for attempt in range(max_retries + 1):
             try:
                 if attempt > 0:
-                    self.logger.log_operation_start(f"{operation}_retry", {"attempt": attempt + 1})
-                
+                    self.logger.log_operation_start(f"{operation}_retry", {
+                        "attempt": attempt + 1,
+                        "provider": provider_type
+                    })
+
                 response = self.llm.invoke(messages)
-                
+
                 if attempt > 0:
-                    self.logger.log_operation_success(f"{operation}_retry", details={"attempt": attempt + 1})
-                
+                    self.logger.log_operation_success(f"{operation}_retry", details={
+                        "attempt": attempt + 1,
+                        "provider": provider_type
+                    })
+
                 return response
-                
+
             except Exception as e:
                 error_str = str(e).lower()
-                
-                # Enhanced error detection patterns
-                is_auth_error = any(pattern in error_str for pattern in ['401', 'unauthorized', 'authentication', 'token', 'expired'])
 
-                is_connection_error = any(pattern in error_str for pattern in ['connection', 'timeout', 'network', 'refused', 'unreachable'])
+                # Enhanced error detection patterns for different providers
+                is_auth_error = any(pattern in error_str for pattern in [
+                    '401', 'unauthorized', 'authentication', 'token', 'expired',
+                    'invalid api key', 'invalid_api_key', 'permission denied'
+                ])
+
+                is_connection_error = any(pattern in error_str for pattern in [
+                    'connection', 'timeout', 'network', 'refused', 'unreachable'
+                ])
 
                 # Handle authentication errors
                 if attempt < max_retries and is_auth_error:
-                    self.logger.log_operation_warning(operation, f"Authentication error on attempt {attempt + 1}, refreshing LLM connection")
+                    self.logger.log_operation_warning(
+                        operation,
+                        f"Authentication error on attempt {attempt + 1} for {provider_type}, refreshing connection"
+                    )
                     try:
                         self.refresh_llm_connection()
                         continue  # Retry with refreshed connection
@@ -2445,14 +2658,21 @@ WORKSHEET MERGING:
                             raise AgentError(
                                 f"Authentication failed and could not refresh connection: {refresh_error}",
                                 ErrorCategory.AUTHENTICATION,
-                                {"attempt": attempt + 1, "max_retries": max_retries},
+                                {
+                                    "attempt": attempt + 1,
+                                    "max_retries": max_retries,
+                                    "provider": provider_type
+                                },
                                 refresh_error
                             )
 
                 # Handle connection errors with exponential backoff
                 elif attempt < max_retries and is_connection_error:
                     wait_time = min(2 ** attempt, 10)  # Exponential backoff, max 10 seconds
-                    self.logger.log_operation_warning(operation, f"Connection error on attempt {attempt + 1}, waiting {wait_time}s before retry")
+                    self.logger.log_operation_warning(
+                        operation,
+                        f"Connection error on attempt {attempt + 1} for {provider_type}, waiting {wait_time}s before retry"
+                    )
 
                     import time
                     time.sleep(wait_time)
@@ -2462,7 +2682,10 @@ WORKSHEET MERGING:
                         self.refresh_llm_connection()
                         continue
                     except Exception as refresh_error:
-                        self.logger.log_operation_warning(operation, f"Connection refresh failed: {refresh_error}, continuing with retry")
+                        self.logger.log_operation_warning(
+                            operation,
+                            f"Connection refresh failed: {refresh_error}, continuing with retry"
+                        )
                         continue
 
                 # If it's the last attempt or an unrecoverable error, raise it
@@ -2470,14 +2693,19 @@ WORKSHEET MERGING:
                     raise AgentError(
                         f"LLM invocation failed after {max_retries + 1} attempts: {e}",
                         ErrorCategory.SYSTEM,
-                        {"attempt": attempt + 1, "max_retries": max_retries, "error_type": type(e).__name__},
+                        {
+                            "attempt": attempt + 1,
+                            "max_retries": max_retries,
+                            "error_type": type(e).__name__,
+                            "provider": provider_type
+                        },
                         e
                     )
-        
+
         raise AgentError(
             "Max retries exceeded for LLM invocation",
             ErrorCategory.SYSTEM,
-            {"max_retries": max_retries}
+            {"max_retries": max_retries, "provider": provider_type}
         )
     
     def _execute_code(self, state: AgentState) -> AgentState:
@@ -2565,6 +2793,8 @@ WORKSHEET MERGING:
                     'SelectKBest': SelectKBest,
                     'RFE': RFE,
                     'f_classif': f_classif,
+                    'mutual_info_regression': mutual_info_regression,
+                    'mutual_info_classif': mutual_info_classif,
                     'f_regression': f_regression,
                     'train_test_split': train_test_split,
                     'cross_val_score': cross_val_score,
@@ -2619,7 +2849,6 @@ WORKSHEET MERGING:
                     'skew': skew,
                     'mode': mode,
                     'entropy': entropy,
-                    'mutual_info_score': mutual_info_score,
                     'pointbiserialr': pointbiserialr,
                     'find_peaks': find_peaks,
                     'savgol_filter': savgol_filter,
@@ -2661,7 +2890,44 @@ WORKSHEET MERGING:
                     'plt': plt,
                     'sns': sns,
                 })
-            
+
+            if self.advanced_ml_available:
+                exec_globals.update({
+                    'xgb': xgb,
+                    'lgb': lgb,
+                    'cb': cb,
+                    'XGBRegressor': xgb.XGBRegressor,
+                    'XGBClassifier': xgb.XGBClassifier,
+                    'LGBMRegressor': lgb.LGBMRegressor,
+                    'LGBMClassifier': lgb.LGBMClassifier,
+                    'CatBoostRegressor': cb.CatBoostRegressor,
+                    'CatBoostClassifier': cb.CatBoostClassifier
+                })
+
+            if self.prophet_available:
+                exec_globals.update({
+                    'Prophet': Prophet
+                })
+
+            if self.anomaly_detection_available:
+                exec_globals.update({
+                    'IForest': IForest,
+                    'LOF': LOF,
+                    'OCSVM': OCSVM,
+                    'KNN': KNN
+                })
+
+            if self.explainability_available:
+                exec_globals.update({
+                    'shap': shap,
+                    'LimeTabularExplainer': LimeTabularExplainer
+                })
+
+            if self.optuna_available:
+                exec_globals.update({
+                    'optuna': optuna
+                })
+
             # Add import capability for dynamic imports
             exec_globals['__builtins__'] = __builtins__
             
@@ -2720,65 +2986,70 @@ WORKSHEET MERGING:
 
             # Enhanced result processing with user-friendly formatting
             if result is not None:
-                # Validate if result needs formatting
-                is_user_friendly, reason = validate_result_user_friendliness(result)
+                # print unformatted result
+                print("unformatted result: \n", result)
+                state['execution_result'] = result
 
-                if not is_user_friendly:
-                    self.logger.log_operation_warning(operation, f"Result needs formatting: {reason}")
+                # Validate if result needs formatting
+                #is_user_friendly, reason = validate_result_user_friendliness(result)
+
+                #if not is_user_friendly:
+                #    self.logger.log_operation_warning(operation, f"Result needs formatting: {reason}")
 
                 # Format result for user consumption
-                try:
-                    formatted_result = format_result_for_user(result, state.get('result_type', 'auto'))
+                #try:
+                #    formatted_result = format_result_for_user(result, state.get('result_type', 'auto'))
 
-                    # Additional validation for very large results
-                    if isinstance(formatted_result, list) and len(
-                            formatted_result) > self.config.max_list_items_display:
-                        # Truncate very large lists
-                        truncated_result = formatted_result[:self.config.max_list_items_display]
-                        truncated_result.append({
-                            "_note": f"Showing first {self.config.max_list_items_display:,} of {len(formatted_result):,} items",
-                            "_type": "system_message"
-                        })
-                        state['execution_result'] = truncated_result
-                    else:
-                        state['execution_result'] = formatted_result
+                #    # Additional validation for very large results
+                #    if isinstance(formatted_result, list) and len(formatted_result) > self.config.max_list_items_display:
+                #        # Truncate very large lists
+                #        truncated_result = formatted_result[:self.config.max_list_items_display]
+                #        truncated_result.append({
+                #            "_note": f"Showing first {self.config.max_list_items_display:,} of {len(formatted_result):,} items",
+                #            "_type": "system_message"
+                #        })
+                #        state['execution_result'] = truncated_result
+                #    else:
+                #        state['execution_result'] = formatted_result
 
-                    # Log formatting success
-                    self.logger.log_operation_success("result_formatting", details={
-                        "original_type": type(result).__name__,
-                        "formatted_type": type(formatted_result).__name__,
-                        "user_friendly": True
-                    })
+                #    # Log formatting success
+                #    self.logger.log_operation_success("result_formatting", details={
+                #        "original_type": type(result).__name__,
+                #        "formatted_type": type(formatted_result).__name__,
+                #        "user_friendly": True
+                #    })
 
-                except Exception as format_error:
-                    self.logger.log_error(format_error, "result_formatting")
-                    # Fallback to safe string representation
-                    state['execution_result'] = f"Analysis completed successfully. Result: {str(result)[:500]}..."
+                #except Exception as format_error:
+                #    self.logger.log_error(format_error, "result_formatting")
+                #    # Fallback to safe string representation
+                #    state['execution_result'] = f"Analysis completed successfully. Result: {str(result)[:500]}..."
 
             else:
                 state['execution_result'] = output or "Code executed successfully"
 
             # Handle plots
             if fig is not None:
-                try:
-                    from result_formatter import format_plot_result
+                state['plot_data'] = json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
 
-                    # If we have both plot and result, format result for plot context
-                    if result is not None:
-                        plot_optimized_result = format_plot_result(result, state.get('plot_data', {}))
-                        state['execution_result'] = plot_optimized_result
+                #try:
+                #    from result_formatter import format_plot_result
 
-                    state['plot_data'] = json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
-
-                except (TypeError, ValueError) as plot_error:
-                    self.logger.log_operation_warning(operation, f"Plot serialization error: {plot_error}")
-                    # Convert figure to dict if direct serialization fails
-                    try:
-                        state['plot_data'] = fig.to_dict()
-                    except:
-                        state['plot_data'] = {}
-                        state['execution_result'] = str(
-                            result) if result is not None else "Plot generated but could not be serialized"
+                #    # If we have both plot and result, format result for plot context
+                #    if result is not None:
+                #        plot_optimized_result = format_plot_result(result, state.get('plot_data', {}))
+                #        state['execution_result'] = plot_optimized_result
+                #
+                #    state['plot_data'] = json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
+                #
+                #except (TypeError, ValueError) as plot_error:
+                #    self.logger.log_operation_warning(operation, f"Plot serialization error: {plot_error}")
+                #    # Convert figure to dict if direct serialization fails
+                #    try:
+                #        state['plot_data'] = fig.to_dict()
+                #    except:
+                #        state['plot_data'] = {}
+                #        state['execution_result'] = str(
+                #            result) if result is not None else "Plot generated but could not be serialized"
             
             state['error'] = ""
             
@@ -2953,6 +3224,8 @@ WORKSHEET MERGING:
                 "has_commentary": bool(final_state.get('commentary', '')),
                 "insights_count": len(final_state.get('insights', []))
             })
+
+            print("execution result: \n", final_state['execution_result'])
 
             return {
                 'success': success,

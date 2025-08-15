@@ -16,6 +16,7 @@ import re
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -28,20 +29,23 @@ class SessionContextEnhancer:
     def _get_default_config(self):
         """Default configuration for session context enhancement"""
         return {
-            'max_history_entries': 10,
+            'max_history_entries': 5,
             'recent_entries_weight': 5,  # Number of most recent entries to emphasize
             'context_relevance_threshold': 0.3,
-            'max_code_lines_in_context': 50,
-            'max_result_summary_length': 200,
+            'max_code_lines_in_context': 500,
+            'max_result_summary_length': 16000,
             'follow_up_keywords': [
                 'also', 'additionally', 'furthermore', 'what about', 'how about',
                 'compare', 'versus', 'vs', 'difference', 'similar', 'like that',
                 'same', 'previous', 'last', 'earlier', 'before', 'above',
-                'it', 'this', 'that', 'them', 'those', 'these'
+                'it', 'this', 'that', 'them', 'those', 'these',
+                'drill down', 'drill into', 'expand on', 'tell me more',
+                'break down', 'details', 'specifically', 'focus on'
             ],
             'reference_keywords': [
                 'that analysis', 'the chart', 'the table', 'the result',
-                'that result', 'those findings', 'the data', 'that data'
+                'that result', 'those findings', 'the data', 'that data',
+                'the values', 'those numbers', 'the metrics'
             ]
         }
     
@@ -64,7 +68,7 @@ class SessionContextEnhancer:
         logger.info(f"Enhancing context with {len(session_history)} history entries")
         
         # Analyze current query for follow-up indicators
-        query_analysis = self._analyze_query_for_followup(current_query)
+        query_analysis = self._analyze_query_for_followup(current_query, session_history)
         
         # Filter and rank history entries based on relevance
         relevant_history = self._filter_relevant_history(session_history, current_query, query_analysis)
@@ -76,8 +80,29 @@ class SessionContextEnhancer:
         enhanced_context = self._combine_contexts(base_context, history_context, query_analysis)
         
         return enhanced_context
+
+    def _analyze_query_for_followup(self, query: str, session_history: List[Dict] = None) -> Dict[str, Any]:
+        """
+        Simplified follow-up analysis using the simple rule:
+        - If no history exists, it's a new query
+        - If history exists, it's a follow-up query
+        """
+        # Simple rule: if we have session history, it's a follow-up
+        is_followup = len(session_history) > 0 if session_history else False
+
+        analysis = {
+            'is_likely_followup': is_followup,
+            'has_references': is_followup,  # If it's a follow-up, assume it may reference previous results
+            'followup_indicators': ['session_history'] if is_followup else [],
+            'reference_phrases': ['previous_context'] if is_followup else [],
+            'query_type': 'followup' if is_followup else 'new',
+            'contains_pronouns': is_followup,  # Assume follow-ups may use pronouns
+            'temporal_references': ['previous'] if is_followup else []
+        }
+
+        return analysis
     
-    def _analyze_query_for_followup(self, query: str) -> Dict[str, Any]:
+    def _analyze_query_for_followup_old(self, query: str) -> Dict[str, Any]:
         """Analyze query to identify follow-up patterns and references"""
         query_lower = query.lower()
         
@@ -160,11 +185,11 @@ class SessionContextEnhancer:
         
         # Add analysis type context
         if query_analysis['query_type'] == 'reference':
-            context_parts.append("🔗 User's query refers to previous results - provide context-aware response")
+            context_parts.append(" User's query refers to previous results - provide context-aware response")
         elif query_analysis['query_type'] == 'comparison':
-            context_parts.append("⚖️ User wants comparison - reference previous analysis for comparison")
+            context_parts.append(" User wants comparison - reference previous analysis for comparison")
         elif query_analysis['query_type'] == 'followup':
-            context_parts.append("📈 User's query builds on previous analysis - maintain context continuity")
+            context_parts.append(" User's query builds on previous analysis - maintain context continuity")
         
         context_parts.append(f"\nPREVIOUS {len(relevant_history)} INTERACTIONS:")
         
@@ -191,7 +216,7 @@ class SessionContextEnhancer:
             
             # Add relevance markers for recent entries
             if i > len(relevant_history) - self.config['recent_entries_weight']:
-                context_parts.append("   ⭐ RECENT - Highly relevant for follow-up questions")
+                context_parts.append("   RECENT - Highly relevant for follow-up questions")
         
         context_parts.append(f"\n{'='*60}")
         context_parts.append("CONTEXT USAGE GUIDELINES:")
@@ -345,6 +370,281 @@ FOLLOW-UP QUERY DETECTED (Type: {query_analysis['query_type']})
 # Global enhancer instance
 _enhancer = SessionContextEnhancer()
 
+############################### New additions
+def is_follow_up_query(query: str, session_history: List[Dict]) -> bool:
+    """
+    Simplified follow-up detection: any query after the first is a follow-up
+
+    Args:
+        query: Current user query
+        session_history: List of previous interactions
+
+    Returns:
+        Boolean indicating if this is a follow-up query
+    """
+    return len(session_history) > 0  # Simple rule: if history exists, it's a follow-up
+
+def is_follow_up_query_old(query: str, session_history: List[Dict]) -> bool:
+    """
+    Detect if a query is a follow-up to previous questions
+
+    Args:
+        query: Current user query
+        session_history: List of previous interactions
+
+    Returns:
+        Boolean indicating if this is likely a follow-up query
+    """
+    if not session_history:
+        return False
+
+    global _enhancer
+    analysis = _enhancer._analyze_query_for_followup(query)
+
+    # Strong indicators of follow-up
+    if analysis['query_type'] in ['reference', 'followup', 'comparison']:
+        return True
+
+    if analysis['contains_pronouns'] or analysis['has_references']:
+        return True
+
+    if analysis['temporal_references']:
+        return True
+
+    # Check if query references specific values from last result
+    if session_history:
+        last_result = session_history[-1].get('result_summary', '')
+        # Extract potential values from last result (numbers, percentages, names)
+        values = re.findall(r'\b(?:\d+\.?\d*%?|\$[\d,]+\.?\d*|[A-Z][a-z]+)\b', last_result)
+        query_lower = query.lower()
+        for value in values[:100]:  # Check first 100 values
+            if value.lower() in query_lower:
+                return True
+
+    return False
+
+
+def create_result_summary(result: Any, max_length: int = 1000) -> str:
+    """
+    Create a comprehensive result summary for session context
+
+    Args:
+        result: The result from agent processing
+        max_length: Maximum length of summary (default 1000)
+
+    Returns:
+        String summary of the result
+    """
+    # Import pandas at the function level to handle DataFrames/Series
+    try:
+        import pandas as pd
+    except ImportError:
+        pd = None
+
+    if result is None:
+        return "No result returned"
+
+    if isinstance(result, str):
+        # For string results, preserve more content
+        if len(result) <= max_length:
+            return result
+        else:
+            # Smart truncation - try to break at sentence boundary
+            truncated = result[:max_length]
+            last_period = truncated.rfind('.')
+            if last_period > max_length * 0.7:  # If we have a period in last 30%
+                return truncated[:last_period + 1]
+            return truncated + "..."
+
+    elif isinstance(result, (int, float)):
+        return f"Numeric value: {result:,.2f}" if isinstance(result, float) else f"Numeric value: {result:,}"
+
+    elif isinstance(result, dict):
+        # Summarize dictionary structure and content
+        if not result:
+            return "Empty dictionary"
+
+        summary_parts = []
+        total_keys = len(result)
+
+        for i, (key, value) in enumerate(list(result.items())):
+            if isinstance(value, (list, dict)):
+                if isinstance(value, list) and value and isinstance(value[0], dict):
+                    # List of dicts (common for table data)
+                    summary_parts.append(f"{key}: Table with {len(value)} rows")
+                else:
+                    summary_parts.append(f"{key}: {type(value).__name__} with {len(value)} items")
+            elif isinstance(value, (int, float)):
+                formatted_val = f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
+                summary_parts.append(f"{key}: {formatted_val}")
+            else:
+                val_str = str(value)
+                summary_parts.append(f"{key}: {val_str}")
+
+        summary = f"Dictionary with {total_keys} keys: " + "; ".join(summary_parts)
+
+        return summary
+
+    elif isinstance(result, list):
+        if not result:
+            return "Empty list"
+
+        # Check if it's a list of dictionaries (table data)
+        if isinstance(result[0], dict):
+            keys = list(result[0].keys())
+            num_rows = len(result)
+            num_cols = len(keys)
+
+            # Create informative summary
+            summary = f"Table with {num_rows} rows and {num_cols} columns"
+
+            # Add column names (up to 30)
+            if keys:
+                cols_preview = keys[:30]
+                summary += f"\nColumns: {', '.join(cols_preview)}"
+                if len(keys) > 30:
+                    summary += f" ... and {len(keys) - 30} more"
+
+            # Add sample of first 5 rows
+            rows_to_show = min(5, len(result))  # Show up to 5 rows
+            if rows_to_show > 0:
+                summary += f"\n\nFirst {rows_to_show} rows:"
+
+                for row_idx in range(rows_to_show):
+                    row = result[row_idx]
+                    row_items = []
+
+                    # Show up to 10 key-value pairs per row
+                    items_to_show = min(10, len(keys))
+                    for k in keys[:items_to_show]:
+                        v = row.get(k, '')
+                        # Format value based on type
+                        if isinstance(v, float):
+                            val_str = f"{v:.2f}"
+                        elif isinstance(v, int):
+                            val_str = f"{v:,}" if v > 999 else str(v)
+                        else:
+                            val_str = str(v)[:50]  # Limit string length
+                        row_items.append(f"{k}={val_str}")
+
+                    row_summary = f"  Row {row_idx + 1}: {', '.join(row_items)}"
+                    if len(keys) > items_to_show:
+                        row_summary += f" ... +{len(keys) - items_to_show} more fields"
+                    summary += f"\n{row_summary}"
+
+                if num_rows > rows_to_show:
+                    summary += f"\n  ... and {num_rows - rows_to_show} more rows"
+
+            return summary
+
+        # Regular list
+        elif isinstance(result[0], (int, float, str)):
+            sample_size = min(5, len(result))
+            sample_items = result[:sample_size]
+
+            # Format based on type
+            if isinstance(result[0], float):
+                sample_str = ', '.join([f"{x:.2f}" for x in sample_items])
+            elif isinstance(result[0], int):
+                sample_str = ', '.join([f"{x:,}" for x in sample_items])
+            else:
+                sample_str = ', '.join([str(x)[:30] for x in sample_items])
+
+            summary = f"List with {len(result)} items: [{sample_str}"
+            if len(result) > sample_size:
+                summary += f", ... and {len(result) - sample_size} more"
+            summary += "]"
+
+            return summary
+
+        else:
+            # Complex objects in list
+            return f"List with {len(result)} {type(result[0]).__name__} objects"
+
+    elif pd and isinstance(result, pd.DataFrame):
+        shape = result.shape
+        cols = list(result.columns)
+        summary = f"DataFrame with {shape[0]} rows and {shape[1]} columns"
+        summary += f"\nColumns: {', '.join(map(str, cols))}"
+
+        # Add first 5 rows of actual data
+        rows_to_show = min(5, len(result))
+        if rows_to_show > 0:
+            summary += f"\n\nFirst {rows_to_show} rows:"
+
+            # Convert first 5 rows to dict format for easier processing
+            sample_data = result.head(rows_to_show).to_dict('records')
+
+            for idx, row_dict in enumerate(sample_data):
+                row_items = []
+                cols_to_show = len(cols)  # Show up to 4 columns per row
+
+                for col in cols[:cols_to_show]:
+                    val = row_dict.get(col)
+
+                    # Format value based on type
+                    if pd.isna(val):
+                        val_str = "NaN"
+                    elif isinstance(val, float):
+                        val_str = f"{val:.2f}"
+                    elif isinstance(val, (int, np.integer)):
+                        val_str = f"{val:,}" if abs(val) > 999 else str(val)
+                    elif isinstance(val, bool):
+                        val_str = str(val)
+                    else:
+                        val_str = str(val)[:50]  # Truncate long strings
+
+                    row_items.append(f"{col}={val_str}")
+
+                row_summary = f"  Row {idx + 1}: {', '.join(row_items)}"
+                if len(result.columns) > cols_to_show:
+                    row_summary += f" ... +{len(result.columns) - cols_to_show} more cols"
+                summary += f"\n{row_summary}"
+
+            if shape[0] > rows_to_show:
+                summary += f"\n  ... and {shape[0] - rows_to_show} more rows"
+
+        return summary
+
+    elif pd and isinstance(result, pd.Series):
+        summary = f"Series '{result.name}' with {len(result)} values, dtype: {result.dtype}"
+
+        # Show first 20 values with their index
+        sample_size = min(20, len(result))
+        if sample_size > 0:
+            summary += f"\n\nFirst {sample_size} values:"
+
+            for idx in range(sample_size):
+                index_label = result.index[idx]
+                value = result.iloc[idx]
+
+                # Format value
+                if pd.isna(value):
+                    val_str = "NaN"
+                elif isinstance(value, float):
+                    val_str = f"{value:.2f}"
+                elif isinstance(value, (int, np.integer)):
+                    val_str = f"{value:,}" if abs(value) > 999 else str(value)
+                else:
+                    val_str = str(value)[:50]
+
+                summary += f"\n  {index_label}: {val_str}"
+
+            if len(result) > sample_size:
+                summary += f"\n  ... and {len(result) - sample_size} more values"
+
+        return summary
+
+    else:
+        # Generic fallback
+        result_str = str(result)
+        if len(result_str) <= max_length:
+            return result_str
+
+        return result_str[:max_length] + "..."
+
+#####################################################
+
 def enhance_session_context(base_context: str, session_history: List[Dict], 
                           current_query: str, config=None) -> str:
     """
@@ -390,3 +690,4 @@ def get_follow_up_suggestions(session_history: List[Dict]) -> List[str]:
         List of suggested follow-up questions
     """
     return _enhancer.create_follow_up_hints(session_history)
+

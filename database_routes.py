@@ -75,6 +75,181 @@ def create_onlyoffice_document(file_path, original_filename):
         raise e
 
 
+def convert_pandas_types(obj):
+    """Convert pandas types to JSON serializable types"""
+    # Handle strings first - they should NOT be converted to character lists
+    if isinstance(obj, str):
+        return obj
+
+    # Handle DataFrames and Series first (before pd.isna check)
+    if isinstance(obj, pd.DataFrame):
+        # Convert DataFrame to records format
+        try:
+            return obj.to_dict('records')
+        except:
+            return str(obj)
+    elif isinstance(obj, pd.Series):
+        # Convert Series to list
+        try:
+            return obj.tolist()
+        except:
+            return str(obj)
+    elif isinstance(obj, (pd.Index, pd.MultiIndex)):
+        try:
+            return obj.tolist()
+        except:
+            return str(obj)
+
+    # Handle None and NaN values
+    try:
+        if pd.isna(obj):
+            return None
+    except (ValueError, TypeError):
+        # pd.isna() failed, obj is likely not a scalar
+        pass
+
+    # Handle array-like objects (but NOT strings)
+    if hasattr(obj, '__len__') and len(obj) > 1 and not isinstance(obj, str):
+        if isinstance(obj, dict):
+            return {k: convert_pandas_types(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [convert_pandas_types(v) for v in obj]
+        else:
+            try:
+                return obj.tolist() if hasattr(obj, 'tolist') else list(obj)
+            except:
+                return str(obj)
+
+    # Handle scalar values with dtypes
+    elif hasattr(obj, 'dtype'):
+        # Handle nullable integer types
+        if str(obj.dtype) in ['Int64', 'Int32', 'Int16', 'Int8']:
+            return int(obj) if pd.notna(obj) else None
+        elif str(obj.dtype) in ['Float64', 'Float32']:
+            return float(obj) if pd.notna(obj) else None
+        elif str(obj.dtype) == 'boolean':
+            return bool(obj) if pd.notna(obj) else None
+        elif str(obj.dtype) == 'string':
+            return str(obj) if pd.notna(obj) else None
+        elif pd.api.types.is_integer_dtype(obj.dtype):
+            return int(obj) if pd.notna(obj) else None
+        elif pd.api.types.is_float_dtype(obj.dtype):
+            return float(obj) if pd.notna(obj) else None
+        elif pd.api.types.is_bool_dtype(obj.dtype):
+            return bool(obj) if pd.notna(obj) else None
+        else:
+            return str(obj) if pd.notna(obj) else None
+
+    # Handle numpy types
+    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+
+    # Handle pandas dtypes directly
+    elif hasattr(obj, '__class__') and 'DType' in str(type(obj)):
+        return str(obj)
+
+    # Handle remaining dictionaries and lists
+    elif isinstance(obj, dict):
+        return {k: convert_pandas_types(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [convert_pandas_types(v) for v in obj]
+
+    # Default case
+    else:
+        return obj
+
+
+def remove_plot_objects_from_result(data):
+    """
+    Recursively remove plot objects (Plotly figures, matplotlib figures, etc.)
+    from the result dictionary to prevent JSON serialization errors.
+    """
+    import plotly.graph_objects as go
+    import plotly.graph_objs as graph_objs
+
+    def is_plot_object(obj):
+        """Check if an object is a plotting object that should be excluded"""
+        # Check for Plotly Figure objects
+        if hasattr(go, 'Figure') and isinstance(obj, go.Figure):
+            return True
+        if hasattr(graph_objs, 'Figure') and isinstance(obj, graph_objs.Figure):
+            return True
+
+        # Check for matplotlib figures
+        try:
+            import matplotlib.figure
+            if isinstance(obj, matplotlib.figure.Figure):
+                return True
+        except ImportError:
+            pass
+
+        # Check for other common plotting objects by class name
+        obj_type_name = type(obj).__name__
+        plot_object_names = [
+            'Figure', 'Axes', 'Artist', 'Plot', 'Chart',
+            'Visualization', 'Graph', 'PlotlyFigure'
+        ]
+
+        if any(plot_name in obj_type_name for plot_name in plot_object_names):
+            return True
+
+        # Check for objects with plotting-specific attributes
+        plot_attributes = ['data', 'layout', 'to_html', 'show', 'to_json']
+        if hasattr(obj, 'data') and hasattr(obj, 'layout') and hasattr(obj, 'show'):
+            return True
+
+        return False
+
+    def clean_dict(d):
+        """Recursively clean a dictionary"""
+        if not isinstance(d, dict):
+            return d
+
+        cleaned = {}
+        for key, value in d.items():
+            if is_plot_object(value):
+                print(f"Removed plot object from result: key='{key}', type={type(value).__name__}")
+                continue  # Skip this key-value pair
+            elif isinstance(value, dict):
+                cleaned[key] = clean_dict(value)
+            elif isinstance(value, list):
+                cleaned[key] = clean_list(value)
+            else:
+                cleaned[key] = value
+        return cleaned
+
+    def clean_list(lst):
+        """Recursively clean a list"""
+        cleaned = []
+        for item in lst:
+            if is_plot_object(item):
+                print(f"Removed plot object from result list: type={type(item).__name__}")
+                continue  # Skip this item
+            elif isinstance(item, dict):
+                cleaned.append(clean_dict(item))
+            elif isinstance(item, list):
+                cleaned.append(clean_list(item))
+            else:
+                cleaned.append(item)
+        return cleaned
+
+    # Handle different data types
+    if isinstance(data, dict):
+        return clean_dict(data)
+    elif isinstance(data, list):
+        return clean_list(data)
+    else:
+        # For non-dict/list data, check if it's a plot object
+        if is_plot_object(data):
+            print(f"Removed plot object from result: type={type(data).__name__}")
+            return None
+        return data
+
+
 def analyze_data(df):
     """Analyze data - copied from app.py to avoid circular import"""
 
@@ -765,6 +940,9 @@ def register_database_routes(app):
             }
 
             logger.info("Enhanced two-step processing with supplemental context completed successfully")
+            combined_result['step2_result'] = remove_plot_objects_from_result(combined_result['step2_result'])
+            combined_result = convert_pandas_types(combined_result)
+
             return jsonify(combined_result)
 
         except Exception as e:

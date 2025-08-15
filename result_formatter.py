@@ -1,11 +1,16 @@
 """
-Result Formatter Module for DataAnalysisAgent
+Result Formatter Module for DataAnalysisAgent - FIXED VERSION
 ============================================
 
 This module ensures all Python objects and data structures are formatted 
 in a user-friendly way before being sent to the frontend. It prevents 
 raw dictionaries, tuples, complex objects etc. from being displayed 
 to non-technical users.
+
+CRITICAL FIXES:
+- Handles pandas DataFrames/Series when they appear as dict values
+- Robust type checking to prevent "ambiguous truth value" errors
+- Comprehensive fallback mechanisms for unexpected types
 
 Usage in agent.py:
     from result_formatter import format_result_for_user
@@ -42,7 +47,10 @@ class ResultFormatter:
             'dict_display_threshold': 100,  # Max dict items to show as table
             'summary_threshold': 10,  # When to create summaries vs full display
             'date_format': '%Y-%m-%d',
-            'datetime_format': '%Y-%m-%d %H:%M:%S'
+            'datetime_format': '%Y-%m-%d %H:%M:%S',
+            # New: DataFrame handling in dicts
+            'max_dataframe_rows_in_dict': 1000,  # Max rows to preserve in dict DataFrames
+            'preserve_all_dataframes': True,  # Whether to always preserve DataFrame data
         }
     
     def format_result_for_user(self, result: Any, result_type: str = 'auto') -> Union[str, List[Dict], Dict]:
@@ -63,7 +71,7 @@ class ResultFormatter:
             if result is None:
                 return "No result returned from analysis"
             
-            # Handle pandas objects first
+            # Handle pandas objects first (CRITICAL: Before other type checks)
             if isinstance(result, pd.DataFrame):
                 return self._format_dataframe(result, result_type)
             elif isinstance(result, pd.Series):
@@ -187,9 +195,29 @@ class ResultFormatter:
                f"Values range from {self._format_scalar(arr.min())} to {self._format_scalar(arr.max())}"
     
     def _format_scalar(self, value: Union[str, int, float, bool, np.number]) -> Union[str, int, float, bool]:
-        """Format scalar values for user display"""
-        if pd.isna(value):
-            return "N/A"
+        """Format scalar values for user display - FIXED to handle DataFrames"""
+        
+        # CRITICAL FIX: Handle DataFrames/Series that shouldn't be here
+        if isinstance(value, (pd.DataFrame, pd.Series)):
+            logger.warning(f"DataFrame/Series passed to _format_scalar, redirecting to proper handler")
+            if isinstance(value, pd.DataFrame):
+                return self._format_dataframe(value, 'auto')
+            else:
+                return self._format_series(value, 'auto')
+        
+        # CRITICAL FIX: Handle numpy arrays that shouldn't be here
+        if isinstance(value, np.ndarray):
+            logger.warning(f"NumPy array passed to _format_scalar, redirecting to proper handler")
+            return self._format_numpy_array(value, 'auto')
+        
+        # Now safe to check for NaN on scalar values only
+        try:
+            if pd.isna(value):
+                return "N/A"
+        except (TypeError, ValueError):
+            # If pd.isna fails, the value is not a scalar pandas can handle
+            # Fall back to string representation
+            return self._safe_str_representation(value)
         
         if isinstance(value, (np.integer, int)):
             if abs(value) >= self.config['large_number_threshold']:
@@ -197,8 +225,6 @@ class ResultFormatter:
             return int(value)
         
         elif isinstance(value, (np.floating, float)):
-            if pd.isna(value):
-                return "N/A"
             if abs(value) >= self.config['large_number_threshold']:
                 return f"{value:,.{self.config['decimal_places']}f}"
             return round(float(value), self.config['decimal_places'])
@@ -212,7 +238,7 @@ class ResultFormatter:
             return value
         
         else:
-            return str(value)
+            return self._safe_str_representation(value)
     
     def _format_sequence(self, seq: Union[List, Tuple], result_type: str) -> Union[List[Dict], str]:
         """Format lists and tuples for user display"""
@@ -221,7 +247,12 @@ class ResultFormatter:
         
         # Single item
         if len(seq) == 1:
-            return self._format_scalar(seq[0])
+            # CRITICAL FIX: Don't pass complex objects to _format_scalar
+            item = seq[0]
+            if isinstance(item, (pd.DataFrame, pd.Series, np.ndarray)):
+                return self.format_result_for_user(item, result_type)
+            else:
+                return self._format_scalar(item)
         
         # Check if it's a list of similar items that can be formatted as table
         if self._is_homogeneous_sequence(seq):
@@ -231,59 +262,188 @@ class ResultFormatter:
                     # List of dictionaries - already table-ready
                     return [self._clean_dict_for_display(item) for item in seq]
                 else:
-                    # List of simple values
-                    return [{"Index": i+1, "Value": self._format_scalar(item)} for i, item in enumerate(seq)]
+                    # List of simple values - but check for complex types first
+                    formatted_items = []
+                    for i, item in enumerate(seq):
+                        if isinstance(item, (pd.DataFrame, pd.Series, np.ndarray)):
+                            # Complex item - summarize it
+                            formatted_value = self._summarize_complex_value(item)
+                        else:
+                            formatted_value = self._format_scalar(item)
+                        formatted_items.append({"Index": i+1, "Value": formatted_value})
+                    return formatted_items
             else:
                 # Too many items - provide summary
-                sample_items = seq[:self.config['summary_threshold']]
-                return [{"Index": i+1, "Value": self._format_scalar(item)} for i, item in enumerate(sample_items)] + \
-                       [{"_note": f"... and {len(seq) - len(sample_items)} more items", "_type": "system_message"}]
+                sample_items = []
+                for i, item in enumerate(seq[:self.config['summary_threshold']]):
+                    if isinstance(item, (pd.DataFrame, pd.Series, np.ndarray)):
+                        formatted_value = self._summarize_complex_value(item)
+                    else:
+                        formatted_value = self._format_scalar(item)
+                    sample_items.append({"Index": i+1, "Value": formatted_value})
+                
+                sample_items.append({
+                    "_note": f"... and {len(seq) - len(sample_items) + 1} more items", 
+                    "_type": "system_message"
+                })
+                return sample_items
         else:
             # Heterogeneous sequence - format each item
             if len(seq) <= self.config['summary_threshold']:
-                return [{"Index": i+1, "Value": str(self._format_scalar(item))} for i, item in enumerate(seq)]
+                formatted_items = []
+                for i, item in enumerate(seq):
+                    if isinstance(item, (pd.DataFrame, pd.Series, np.ndarray)):
+                        formatted_value = self._summarize_complex_value(item)
+                    else:
+                        formatted_value = str(self._format_scalar(item))
+                    formatted_items.append({"Index": i+1, "Value": formatted_value})
+                return formatted_items
             else:
-                return f"List with {len(seq)} diverse items. First few: {[str(x) for x in seq[:3]]}"
+                # Summarize large heterogeneous sequences
+                first_few = []
+                for item in seq[:3]:
+                    if isinstance(item, (pd.DataFrame, pd.Series, np.ndarray)):
+                        first_few.append(self._summarize_complex_value(item))
+                    else:
+                        first_few.append(str(item))
+                return f"List with {len(seq)} diverse items. First few: {first_few}"
     
-    def _format_dictionary(self, d: Dict, result_type: str) -> Union[List[Dict], str]:
-        """Format dictionaries for user display"""
+    def _format_dictionary(self, d: Dict, result_type: str) -> Union[List[Dict], Dict]:
+        """Format dictionaries for user display - PRESERVES ALL DATA including DataFrames"""
         if len(d) == 0:
             return "Empty result dictionary"
         
-        # Small dictionary - convert to table format
-        if len(d) <= self.config['dict_display_threshold']:
-            formatted_items = []
-            for key, value in d.items():
-                # Format both key and value for user consumption
-                formatted_key = str(key)
-                if isinstance(value, (dict, list, tuple)) and len(str(value)) > 100:
-                    # Complex nested value - summarize it
-                    formatted_value = self._summarize_complex_value(value)
-                else:
-                    formatted_value = self._format_scalar(value)
-                
-                formatted_items.append({
-                    "Attribute": formatted_key,
-                    "Value": formatted_value
-                })
-            return formatted_items
+        # ENHANCED: Create structured result that preserves all data
+        formatted_result = {
+            "_type": "multi_section_result",
+            "_sections": {}
+        }
         
-        # Large dictionary - provide summary and top items
-        else:
-            summary_items = []
-            for i, (key, value) in enumerate(d.items()):
-                if i >= self.config['summary_threshold']:
-                    break
-                summary_items.append({
-                    "Attribute": str(key),
-                    "Value": self._format_scalar(value)
-                })
+        for key, value in d.items():
+            section_key = str(key).replace('_', ' ').title()
             
-            summary_items.append({
-                "_note": f"Showing first {len(summary_items)} of {len(d)} total attributes",
-                "_type": "system_message"
-            })
-            return summary_items
+            # CRITICAL FIX: Preserve all DataFrame data while making it user-friendly
+            if isinstance(value, pd.DataFrame):
+                if value.empty:
+                    formatted_result["_sections"][section_key] = {
+                        "_type": "empty_data",
+                        "_content": "No data available"
+                    }
+                else:
+                    # Handle large DataFrames appropriately
+                    if len(value) > self.config['max_dataframe_rows_in_dict']:
+                        # Large DataFrame - provide sample + summary
+                        sample_data = self._df_to_user_friendly_records(value.head(self.config['max_dataframe_rows_in_dict']))
+                        sample_data.append({
+                            "_note": f"📊 Showing first {self.config['max_dataframe_rows_in_dict']} of {len(value)} total rows",
+                            "_type": "system_message",
+                            "_full_data_available": True
+                        })
+                        
+                        formatted_result["_sections"][section_key] = {
+                            "_type": "large_data_table",
+                            "_content": sample_data,
+                            "_metadata": {
+                                "rows": len(value),
+                                "columns": len(value.columns),
+                                "rows_shown": self.config['max_dataframe_rows_in_dict'],
+                                "description": f"Large table with {len(value)} rows and {len(value.columns)} columns (sample shown)"
+                            }
+                        }
+                    else:
+                        # Normal size DataFrame - convert to user-friendly table format
+                        table_data = self._df_to_user_friendly_records(value)
+                        formatted_result["_sections"][section_key] = {
+                            "_type": "data_table",
+                            "_content": table_data,
+                            "_metadata": {
+                                "rows": len(value),
+                                "columns": len(value.columns),
+                                "description": f"Table with {len(value)} rows and {len(value.columns)} columns"
+                            }
+                        }
+            
+            elif isinstance(value, pd.Series):
+                if len(value) == 0:
+                    formatted_result["_sections"][section_key] = {
+                        "_type": "empty_data", 
+                        "_content": "No data available"
+                    }
+                else:
+                    # Convert Series to appropriate format
+                    series_data = self._format_series(value, 'auto')
+                    formatted_result["_sections"][section_key] = {
+                        "_type": "data_series",
+                        "_content": series_data,
+                        "_metadata": {
+                            "length": len(value),
+                            "description": f"Series with {len(value)} values"
+                        }
+                    }
+            
+            elif isinstance(value, list):
+                # Preserve lists (like insights)
+                formatted_result["_sections"][section_key] = {
+                    "_type": "list_data",
+                    "_content": value,
+                    "_metadata": {
+                        "count": len(value),
+                        "description": f"List with {len(value)} items"
+                    }
+                }
+            
+            elif isinstance(value, dict):
+                # Recursive formatting for nested dicts
+                nested_result = self._format_dictionary(value, result_type)
+                formatted_result["_sections"][section_key] = {
+                    "_type": "nested_dict",
+                    "_content": nested_result,
+                    "_metadata": {
+                        "keys": len(value),
+                        "description": f"Dictionary with {len(value)} items"
+                    }
+                }
+            
+            elif isinstance(value, np.ndarray):
+                # Convert numpy arrays to list format
+                if value.size <= self.config['max_list_items']:
+                    array_data = value.tolist()
+                else:
+                    array_data = value.flatten()[:self.config['max_list_items']].tolist()
+                    array_data.append(f"... and {value.size - self.config['max_list_items']} more values")
+                
+                formatted_result["_sections"][section_key] = {
+                    "_type": "array_data",
+                    "_content": array_data,
+                    "_metadata": {
+                        "shape": value.shape,
+                        "dtype": str(value.dtype),
+                        "description": f"Array with shape {value.shape}"
+                    }
+                }
+            
+            else:
+                # Simple scalar values (strings, numbers, etc.)
+                formatted_result["_sections"][section_key] = {
+                    "_type": "scalar_value",
+                    "_content": self._format_scalar(value),
+                    "_metadata": {
+                        "type": type(value).__name__,
+                        "description": f"{type(value).__name__} value"
+                    }
+                }
+        
+        # If this is a simple dictionary with just a few scalar values, use simpler format
+        if all(section["_type"] == "scalar_value" for section in formatted_result["_sections"].values()) and len(d) <= 5:
+            simple_result = []
+            for section_name, section_data in formatted_result["_sections"].items():
+                simple_result.append({
+                    "Attribute": section_name,
+                    "Value": section_data["_content"]
+                })
+            return simple_result
+        
+        return formatted_result
     
     def _format_datetime(self, dt: Union[datetime, date]) -> str:
         """Format datetime objects for user display"""
@@ -364,28 +524,53 @@ class ResultFormatter:
         return all(isinstance(item, first_type) for item in seq[:10])  # Check first 10 items
     
     def _clean_dict_for_display(self, d: Dict) -> Dict:
-        """Clean dictionary for user display"""
+        """Clean dictionary for user display - FIXED to handle complex values"""
         cleaned = {}
         for key, value in d.items():
             clean_key = str(key).replace('_', ' ').title()
-            cleaned[clean_key] = self._format_scalar(value)
+            
+            # Handle complex values properly
+            if isinstance(value, (pd.DataFrame, pd.Series, np.ndarray)):
+                cleaned[clean_key] = self._summarize_complex_value(value)
+            else:
+                cleaned[clean_key] = self._format_scalar(value)
         return cleaned
     
     def _summarize_complex_value(self, value: Any) -> str:
-        """Create summary for complex nested values"""
-        if isinstance(value, dict):
+        """Create summary for complex nested values - ENHANCED"""
+        if isinstance(value, pd.DataFrame):
+            if value.empty:
+                return "Empty DataFrame"
+            return f"DataFrame: {value.shape[0]} rows × {value.shape[1]} columns"
+        elif isinstance(value, pd.Series):
+            if len(value) == 0:
+                return "Empty Series"
+            return f"Series with {len(value)} values"
+        elif isinstance(value, np.ndarray):
+            return f"Array: {value.shape} shape, {value.dtype} type"
+        elif isinstance(value, dict):
             return f"Dictionary with {len(value)} items"
         elif isinstance(value, (list, tuple)):
             return f"List with {len(value)} items"
-        elif isinstance(value, pd.DataFrame):
-            return f"Table: {value.shape[0]} rows × {value.shape[1]} columns"
         else:
             return str(type(value).__name__)
     
     def _safe_str_representation(self, obj: Any) -> str:
         """Get safe string representation of any object"""
         try:
-            return str(obj)
+            # Special handling for pandas objects
+            if isinstance(obj, pd.DataFrame):
+                if obj.empty:
+                    return "Empty DataFrame"
+                return f"DataFrame with {obj.shape[0]} rows and {obj.shape[1]} columns"
+            elif isinstance(obj, pd.Series):
+                if len(obj) == 0:
+                    return "Empty Series"
+                return f"Series with {len(obj)} values"
+            elif isinstance(obj, np.ndarray):
+                return f"NumPy array with shape {obj.shape}"
+            else:
+                return str(obj)
         except Exception:
             return f"<{type(obj).__name__} object>"
 
@@ -409,7 +594,95 @@ def format_result_for_user(result: Any, result_type: str = 'auto', config=None) 
     if config:
         _formatter = ResultFormatter(config)
     
-    return _formatter.format_result_for_user(result, result_type)
+    formatted = _formatter.format_result_for_user(result, result_type)
+    
+    # Handle structured multi-section results
+    if isinstance(formatted, dict) and formatted.get("_type") == "multi_section_result":
+        return format_multi_section_result(formatted)
+    
+    return formatted
+
+
+def format_multi_section_result(structured_result: Dict) -> Dict:
+    """
+    Format multi-section results for optimal frontend display
+    
+    Args:
+        structured_result: Result with _type="multi_section_result"
+        
+    Returns:
+        Optimized result for frontend consumption
+    """
+    sections = structured_result.get("_sections", {})
+    
+    if len(sections) == 1:
+        # Single section - return the content directly
+        section_data = list(sections.values())[0]
+        return section_data["_content"]
+    
+    # Multiple sections - create organized output
+    result = {
+        "_type": "analysis_result",
+        "_summary": f"Analysis result with {len(sections)} sections",
+        "sections": {}
+    }
+    
+    for section_name, section_data in sections.items():
+        section_type = section_data["_type"]
+        section_content = section_data["_content"]
+        section_metadata = section_data.get("_metadata", {})
+        
+        if section_type == "data_table":
+            # For data tables, include both data and metadata
+            result["sections"][section_name] = {
+                "type": "table",
+                "data": section_content,
+                "summary": section_metadata.get("description", "Data table")
+            }
+        
+        elif section_type == "large_data_table":
+            # For large data tables, include sample data with metadata
+            result["sections"][section_name] = {
+                "type": "large_table", 
+                "data": section_content,
+                "summary": section_metadata.get("description", "Large data table"),
+                "total_rows": section_metadata.get("rows", "unknown"),
+                "rows_shown": section_metadata.get("rows_shown", "unknown")
+            }
+        
+        elif section_type == "list_data":
+            # For lists (like insights), format appropriately
+            result["sections"][section_name] = {
+                "type": "list",
+                "data": section_content,
+                "summary": section_metadata.get("description", "List of items")
+            }
+        
+        elif section_type == "scalar_value":
+            # For simple values
+            result["sections"][section_name] = {
+                "type": "value",
+                "data": section_content,
+                "summary": f"Single {section_metadata.get('type', 'value')}"
+            }
+        
+        elif section_type == "data_series":
+            # For series data
+            result["sections"][section_name] = {
+                "type": "series",
+                "data": section_content,
+                "summary": section_metadata.get("description", "Data series")
+            }
+        
+        else:
+            # Fallback for other types
+            result["sections"][section_name] = {
+                "type": "other",
+                "data": section_content,
+                "summary": section_metadata.get("description", "Data")
+            }
+    
+    return result
 
 
 def format_plot_result(result: Any, plot_data: Dict) -> Union[str, List[Dict]]:
@@ -466,3 +739,91 @@ def validate_result_user_friendliness(result: Any) -> Tuple[bool, str]:
             return False, "Nested complex structures need formatting"
     
     return True, ""
+
+
+def flatten_multi_section_result(structured_result: Dict, section_name: str = None) -> Union[List[Dict], str, Dict]:
+    """
+    Extract a specific section from multi-section result or flatten to simple format
+    
+    Args:
+        structured_result: Result with _type="multi_section_result"
+        section_name: Optional - name of specific section to extract
+        
+    Returns:
+        Flattened result suitable for simple frontend display
+    """
+    if not isinstance(structured_result, dict) or structured_result.get("_type") != "multi_section_result":
+        return structured_result
+    
+    sections = structured_result.get("_sections", {})
+    
+    if section_name:
+        # Extract specific section
+        if section_name in sections:
+            return sections[section_name]["_content"]
+        else:
+            # Try case-insensitive match
+            for key, value in sections.items():
+                if key.lower() == section_name.lower():
+                    return value["_content"]
+            return f"Section '{section_name}' not found"
+    
+    # Flatten all sections to simple format
+    if len(sections) == 1:
+        # Single section - return content directly
+        return list(sections.values())[0]["_content"]
+    
+    # Multiple sections - create simple combined result
+    flattened = {}
+    for section_name, section_data in sections.items():
+        flattened[section_name] = section_data["_content"]
+    
+    return flattened
+
+
+def get_result_summary(result: Any) -> str:
+    """
+    Get a brief text summary of any result type
+    
+    Args:
+        result: Any formatted result
+        
+    Returns:
+        Brief text summary of the result
+    """
+    if isinstance(result, dict):
+        if result.get("_type") == "multi_section_result":
+            sections = result.get("_sections", {})
+            summaries = []
+            for name, data in sections.items():
+                metadata = data.get("_metadata", {})
+                desc = metadata.get("description", f"{name} section")
+                summaries.append(desc)
+            return f"Analysis with {len(sections)} sections: " + ", ".join(summaries)
+        
+        elif result.get("_type") == "analysis_result":
+            return result.get("_summary", "Multi-section analysis result")
+        
+        elif len(result) <= 5:
+            return f"Result with {len(result)} attributes"
+        else:
+            return f"Complex result with {len(result)} sections"
+    
+    elif isinstance(result, list):
+        if len(result) == 0:
+            return "Empty result"
+        elif len(result) == 1:
+            return "Single item result"
+        elif all(isinstance(item, dict) for item in result):
+            return f"Table with {len(result)} rows"
+        else:
+            return f"List with {len(result)} items"
+    
+    elif isinstance(result, str):
+        if len(result) > 100:
+            return f"Text result ({len(result)} characters)"
+        else:
+            return "Text result"
+    
+    else:
+        return f"Result of type {type(result).__name__}"

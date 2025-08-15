@@ -36,6 +36,22 @@ import logging
 import threading
 import time
 
+# entity resolution
+from text_standardizer import (
+    ConservativeTextStandardizer,
+    standardize_data,
+    DatasetStandardizationResult
+)
+
+# Multi dataset merge functionality
+from data_merger import (
+    merge_datasets_on_common_columns,
+    create_merged_excel_file,
+    analyze_merge_feasibility,
+    should_merge_datasets,
+    remove_duplicates_from_dataset
+)
+
 # Import session management
 from session_manager import (
     session_manager, setup_session_cleanup,
@@ -49,15 +65,21 @@ from session_manager import (
     get_active_worksheet, set_active_worksheet,
     get_current_document_key, set_current_document_key,
     get_current_document_url, set_current_document_url,
-    get_session_history, add_to_session_history, clear_session_history,
+    get_session_history, set_session_history, add_to_session_history, clear_session_history,
     reset_current_session
 )
 
 # for enhanced follow-ups
-from session_context_enhancer import enhance_session_context, get_follow_up_suggestions
+from session_context_enhancer import (
+    enhance_session_context,
+    get_follow_up_suggestions,
+    is_follow_up_query,
+    create_result_summary
+)
 
 # Import modularized components
 from agent import DataAnalysisAgent
+from onlyoffice_optimizer import OnlyOfficeOptimizer, optimize_worksheet_data_for_onlyoffice
 from excel_handlers import filter_and_read_clean_worksheets, create_worksheet_report, create_worksheet_report_with_exclusions
 from enhanced_data_profiler import format_enhanced_context_for_llm
 
@@ -117,6 +139,18 @@ app.config['TEMPLATES_AUTO_RELOAD'] = False
 # Setup session cleanup for automatic maintenance
 setup_session_cleanup(app)
 
+# Text standardization configuration
+# Text standardization configuration (Conservative mode)
+TEXT_STANDARDIZATION_ENABLED = os.getenv('TEXT_STANDARDIZATION_ENABLED', 'True').lower() == 'true'
+TEXT_STANDARDIZATION_THRESHOLD = int(os.getenv('TEXT_STANDARDIZATION_THRESHOLD', '95'))
+
+# Initialize conservative text standardizer
+text_standardizer = ConservativeTextStandardizer(
+    similarity_threshold=TEXT_STANDARDIZATION_THRESHOLD,
+    min_column_size=5,
+    max_unique_ratio=0.5
+)
+
 # Initialize the agent (remains global as it's shared infrastructure)
 try:
     agent = DataAnalysisAgent()
@@ -146,85 +180,204 @@ def generate_document_key():
     """Generate a unique document key for OnlyOffice"""
     return str(uuid.uuid4())
 
-def combine_csv_files_to_excel(csv_files):
-    """Combine multiple CSV files into a single Excel workbook"""
-    print(f"Combining {len(csv_files)} CSV files into Excel workbook...")
-    
-    # Create temporary Excel file
+
+def combine_csv_files_to_excel_with_merge(csv_files):
+    """
+    Enhanced: Combine multiple CSV files, with intelligent merging if common columns exist
+    """
+    print(f"Processing {len(csv_files)} CSV files with intelligent merging...")
+
+    # First, read all CSV files into a dictionary
+    csv_datasets = {}
+
+    for csv_file_info in csv_files:
+        file_path = csv_file_info['path']
+        original_filename = csv_file_info['filename']
+
+        # Generate dataset name from filename (remove .csv extension)
+        dataset_name = os.path.splitext(original_filename)[0]
+
+        print(f"Reading CSV: {original_filename}")
+
+        try:
+            # Read CSV with different encoding attempts
+            csv_data = None
+            for encoding in ['utf-8', 'latin-1', 'cp1252']:
+                try:
+                    csv_data = pd.read_csv(file_path, encoding=encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+
+            if csv_data is None:
+                print(f"Warning: Could not read {original_filename} with any encoding, skipping...")
+                continue
+
+            # Clean the data for better JSON serialization (existing code)
+            for col in csv_data.columns:
+                dtype_name = str(csv_data[col].dtype)
+                if any(problematic in dtype_name for problematic in
+                       ['Int64', 'Float64', 'boolean', 'string']):
+                    print(f"Converting column {col} from {dtype_name} to standard type in {dataset_name}")
+                    if 'Int' in dtype_name:
+                        csv_data[col] = pd.to_numeric(csv_data[col], errors='coerce').astype('float64')
+                    elif 'Float' in dtype_name:
+                        csv_data[col] = pd.to_numeric(csv_data[col], errors='coerce').astype('float64')
+                    elif 'boolean' in dtype_name:
+                        csv_data[col] = csv_data[col].astype('object')
+                    else:  # string type
+                        csv_data[col] = csv_data[col].astype('object')
+
+            csv_datasets[dataset_name] = csv_data
+            print(f"CSV {original_filename} loaded successfully with shape {csv_data.shape}")
+
+        except Exception as e:
+            print(f"Error processing CSV {original_filename}: {e}")
+            continue
+
+    if not csv_datasets:
+        raise Exception("No CSV files could be successfully processed")
+
+    # Apply text standardization to CSV datasets BEFORE merging
+    if TEXT_STANDARDIZATION_ENABLED and csv_datasets:
+        print("\n=== APPLYING TEXT STANDARDIZATION TO CSV FILES ===")
+        standardized_csv_datasets, standardization_results = text_standardizer.standardize_worksheet_dict(
+            csv_datasets
+        )
+
+        # Use standardized datasets for merging
+        csv_datasets = standardized_csv_datasets
+
+        # Generate summary
+        standardization_summary = text_standardizer.get_standardization_summary(standardization_results)
+
+        # Log standardization summary
+        if standardization_summary and standardization_summary['total_variants_resolved'] > 0:
+            print(f"Standardized {standardization_summary['total_variants_resolved']} text variants across CSV files")
+
+    # NEW: Analyze merge feasibility
+    merge_analysis = analyze_merge_feasibility(csv_datasets)
+    print(f"Merge analysis: {merge_analysis['feasible']} (common columns: {merge_analysis['strategy_analysis']})")
+
+    if merge_analysis['feasible'] and should_merge_datasets(csv_datasets):
+        print("MERGING STRATEGY: Datasets have common columns - performing intelligent merge")
+
+        # Perform the merge
+        merge_result = merge_datasets_on_common_columns(
+            csv_datasets,
+            merge_strategy='auto',
+            remove_duplicates_first=True)
+
+        if merge_result.success:
+            # Create temporary Excel file with merged data
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            temp_excel_filename = f"merged_csvs_{len(csv_files)}files_{timestamp}.xlsx"
+            temp_excel_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_excel_filename)
+
+            # Save merged data to Excel
+            success, message = create_merged_excel_file(
+                merge_result.merged_df,
+                temp_excel_path,
+                {name: {'shape': df.shape} for name, df in csv_datasets.items()},
+                merge_result
+            )
+
+            if success:
+                # Return merged result as single worksheet
+                merged_worksheet_data = {'Merged_Data': merge_result.merged_df}
+                print(f"Successfully merged {len(csv_files)} CSV files into single dataset")
+                print(f"Merge summary: {merge_result.merge_summary}")
+                print(f"Final shape: {merge_result.merged_df.shape}")
+
+                return temp_excel_path, temp_excel_filename, merged_worksheet_data
+            else:
+                print(f"Failed to create merged Excel file: {message}")
+                # Fallback to original method
+        else:
+            print(f"Merge failed: {'; '.join(merge_result.errors)}")
+            print("Falling back to separate worksheets approach")
+
+    # FALLBACK: Use original method (separate worksheets)
+    print("FALLBACK STRATEGY: Creating separate worksheets (no merge)")
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_excel_filename = f"combined_csvs_{timestamp}.xlsx"
+    temp_excel_filename = f"combined_csvs_{len(csv_files)}_files_{timestamp}.xlsx"
     temp_excel_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_excel_filename)
-    
+
     combined_worksheet_data = {}
-    
+
     with pd.ExcelWriter(temp_excel_path, engine='openpyxl') as writer:
-        for csv_file_info in csv_files:
-            file_path = csv_file_info['path']
-            original_filename = csv_file_info['filename']
-            
-            # Generate worksheet name from filename (remove .csv extension)
-            worksheet_name = os.path.splitext(original_filename)[0]
-            
-            # Ensure worksheet name is valid for Excel (max 31 chars, no special chars)
-            worksheet_name = worksheet_name[:31]
+        for dataset_name, csv_data in csv_datasets.items():
+            # Ensure worksheet name is valid for Excel
+            worksheet_name = dataset_name[:31]
             worksheet_name = ''.join(c for c in worksheet_name if c.isalnum() or c in (' ', '_', '-'))
             if not worksheet_name:
                 worksheet_name = f"Sheet{len(combined_worksheet_data) + 1}"
-            
+
             # Make sure worksheet name is unique
             original_name = worksheet_name
             counter = 1
             while worksheet_name in combined_worksheet_data:
                 worksheet_name = f"{original_name}_{counter}"
                 counter += 1
-            
-            print(f"Processing CSV: {original_filename} -> Worksheet: {worksheet_name}")
-            
-            try:
-                # Read CSV with different encoding attempts
-                csv_data = None
-                for encoding in ['utf-8', 'latin-1', 'cp1252']:
-                    try:
-                        csv_data = pd.read_csv(file_path, encoding=encoding)
-                        break
-                    except UnicodeDecodeError:
-                        continue
-                
-                if csv_data is None:
-                    print(f"Warning: Could not read {original_filename} with any encoding, skipping...")
-                    continue
-                
-                # Clean the data for better JSON serialization
-                for col in csv_data.columns:
-                    dtype_name = str(csv_data[col].dtype)
-                    if any(problematic in dtype_name for problematic in
-                           ['Int64', 'Float64', 'boolean', 'string']):
-                        print(f"Converting column {col} from {dtype_name} to standard type in {worksheet_name}")
-                        if 'Int' in dtype_name:
-                            csv_data[col] = pd.to_numeric(csv_data[col], errors='coerce').astype('float64')
-                        elif 'Float' in dtype_name:
-                            csv_data[col] = pd.to_numeric(csv_data[col], errors='coerce').astype('float64')
-                        elif 'boolean' in dtype_name:
-                            csv_data[col] = csv_data[col].astype('object')
-                        else:  # string type
-                            csv_data[col] = csv_data[col].astype('object')
-                
-                # Save to Excel workbook
-                csv_data.to_excel(writer, sheet_name=worksheet_name, index=False)
-                
-                # Store in combined data structure
-                combined_worksheet_data[worksheet_name] = csv_data
-                print(f"CSV {original_filename} successfully added as worksheet '{worksheet_name}' with shape {csv_data.shape}")
-                
-            except Exception as e:
-                print(f"Error processing CSV {original_filename}: {e}")
-                continue
-    
-    if not combined_worksheet_data:
-        raise Exception("No CSV files could be successfully processed")
-    
-    print(f"Combined Excel workbook created with {len(combined_worksheet_data)} worksheets")
+
+            # Save to Excel workbook
+            csv_data.to_excel(writer, sheet_name=worksheet_name, index=False)
+            combined_worksheet_data[worksheet_name] = csv_data
+
     return temp_excel_path, temp_excel_filename, combined_worksheet_data
+
+
+def process_multi_worksheet_excel_with_merge(clean_worksheets, original_filename, base_path):
+    """
+    Enhanced: Process Excel with multiple worksheets, with intelligent merging if common columns exist
+    """
+    print(f"Processing Excel file with {len(clean_worksheets)} worksheets - checking merge feasibility...")
+
+    # Analyze merge feasibility
+    merge_analysis = analyze_merge_feasibility(clean_worksheets)
+    print(f"Merge analysis: {merge_analysis['feasible']} (common columns: {merge_analysis['strategy_analysis']})")
+
+    if merge_analysis['feasible'] and should_merge_datasets(clean_worksheets):
+        print("MERGING STRATEGY: Worksheets have common columns - performing intelligent merge")
+
+        # Perform the merge
+        merge_result = merge_datasets_on_common_columns(
+            clean_worksheets,
+            merge_strategy='auto',
+            remove_duplicates_first=True)
+
+        if merge_result.success:
+            # Create new Excel file with merged data
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_name = os.path.splitext(original_filename)[0]
+            merged_filename = f"{base_name}_merged_{timestamp}.xlsx"
+            merged_file_path = os.path.join(base_path, merged_filename)
+
+            # Save merged data to Excel
+            success, message = create_merged_excel_file(
+                merge_result.merged_df,
+                merged_file_path,
+                {name: {'shape': df.shape} for name, df in clean_worksheets.items()},
+                merge_result
+            )
+
+            if success:
+                # Return merged result as single worksheet
+                merged_worksheet_data = {'Merged_Data': merge_result.merged_df}
+                print(f"Successfully merged {len(clean_worksheets)} worksheets into single dataset")
+                print(f"Merge summary: {merge_result.merge_summary}")
+                print(f"Final shape: {merge_result.merged_df.shape}")
+
+                return True, merged_file_path, merged_filename, merged_worksheet_data, merge_result
+            else:
+                print(f"Failed to create merged Excel file: {message}")
+        else:
+            print(f"Merge failed: {'; '.join(merge_result.errors)}")
+            print("Falling back to original multi-worksheet approach")
+
+    # No merge performed or merge failed
+    return False, None, None, clean_worksheets, None
 
 def create_onlyoffice_document(file_path, original_filename):
     """Create an OnlyOffice-compatible document and return the document URL and key"""
@@ -303,8 +456,10 @@ def create_onlyoffice_document(file_path, original_filename):
 
 def create_cleaned_excel_for_onlyoffice(clean_worksheets, original_filename, base_path):
     """
-    Create a cleaned Excel file with only the successfully processed worksheets,
-    properly formatted starting from A1, for OnlyOffice display.
+    Create a cleaned AND OPTIMIZED Excel file for OnlyOffice display.
+
+    NEW: Now includes intelligent optimization to prevent browser memory issues.
+    Creates display-optimized version while preserving full dataset for analysis.
 
     Args:
         clean_worksheets: Dictionary of cleaned DataFrames
@@ -312,20 +467,42 @@ def create_cleaned_excel_for_onlyoffice(clean_worksheets, original_filename, bas
         base_path: Base path for saving the cleaned file
 
     Returns:
-        (cleaned_file_path, cleaned_filename): Paths to the cleaned Excel file
+        (cleaned_file_path, cleaned_filename, optimization_report): Paths to the cleaned Excel file and optimization details
     """
     try:
         # Generate cleaned filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         base_name = os.path.splitext(original_filename)[0]
-        cleaned_filename = f"{base_name}_cleaned_{timestamp}.xlsx"
+        cleaned_filename = f"{base_name}_onlyoffice_optimized_{timestamp}.xlsx"
         cleaned_file_path = os.path.join(base_path, cleaned_filename)
 
-        print(f"  Creating cleaned Excel file for OnlyOffice: {cleaned_filename}")
+        print(f"  Creating optimized Excel file for OnlyOffice: {cleaned_filename}")
 
-        # Create Excel writer
+        # STEP 1: Optimize worksheets for OnlyOffice display
+        optimized_worksheets, optimization_report = optimize_worksheet_data_for_onlyoffice(clean_worksheets)
+
+        # Log optimization results
+        if optimization_report['worksheets_optimized'] > 0:
+            print(f"  OnlyOffice optimization applied to {optimization_report['worksheets_optimized']} worksheet(s)")
+            print(f"  Estimated memory savings: {optimization_report['total_memory_saved_mb']:.1f} MB")
+
+            # Log specific optimizations
+            for ws_name, ws_report in optimization_report['optimization_details'].items():
+                if ws_report['optimizations_applied']:
+                    original_shape = ws_report['original_shape']
+                    final_shape = ws_report['final_shape']
+                    print(
+                        f"    '{ws_name}': {original_shape[0]:,}×{original_shape[1]} → {final_shape[0]:,}×{final_shape[1]} cells")
+
+                    # Show warnings to user about what was optimized
+                    for warning in ws_report.get('warnings', []):
+                        print(f"        {warning}")
+        else:
+            print(f"  No OnlyOffice optimization needed - datasets are already browser-friendly")
+
+        # STEP 2: Create Excel file with optimized data
         with pd.ExcelWriter(cleaned_file_path, engine='openpyxl') as writer:
-            for sheet_name, df in clean_worksheets.items():
+            for sheet_name, df in optimized_worksheets.items():
                 # Ensure the data starts at A1 and is properly formatted
                 clean_df = df.copy()
 
@@ -343,12 +520,60 @@ def create_cleaned_excel_for_onlyoffice(clean_worksheets, original_filename, bas
 
                 print(f"    Sheet '{sheet_name}': {clean_df.shape[0]} rows × {clean_df.shape[1]} columns")
 
-        print(f"  Cleaned Excel file created successfully: {cleaned_file_path}")
-        return cleaned_file_path, cleaned_filename
+        print(f"  Optimized Excel file created successfully: {cleaned_file_path}")
+        return cleaned_file_path, cleaned_filename, optimization_report
 
     except Exception as e:
-        print(f"  Error creating cleaned Excel file: {e}")
+        print(f"  Error creating optimized Excel file: {e}")
         raise e
+
+
+def apply_text_standardization(worksheets_dict, file_type="Excel"):
+    """
+    Apply text standardization to worksheet data
+
+    Args:
+        worksheets_dict: Dictionary of worksheet_name -> DataFrame
+        file_type: Type of file being processed (for logging)
+
+    Returns:
+        (standardized_worksheets, standardization_results, summary)
+    """
+    if not TEXT_STANDARDIZATION_ENABLED:
+        logger.info("Text standardization is disabled")
+        return worksheets_dict, {}, None
+
+    try:
+        logger.info(f"Applying text standardization to {len(worksheets_dict)} worksheet(s) from {file_type} file")
+
+        # Standardize the worksheets
+        standardized_worksheets, results = text_standardizer.standardize_worksheet_dict(
+            worksheets_dict,
+            method=TEXT_STANDARDIZATION_METHOD
+        )
+
+        # Generate summary
+        summary = text_standardizer.get_standardization_summary(results)
+
+        # Log results
+        if summary['total_variants_resolved'] > 0:
+            logger.info(
+                f"Text standardization complete: {summary['total_variants_resolved']} variants resolved across {summary['total_columns_standardized']} columns")
+
+            # Print detailed report
+            report = text_standardizer.generate_standardization_report(results)
+            print(report)
+        else:
+            logger.info("No text variants found that needed standardization")
+
+        return standardized_worksheets, results, summary
+
+    except Exception as e:
+        logger.error(f"Error during text standardization: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return original data if standardization fails
+        return worksheets_dict, {}, None
 
 
 def cleanup_old_cleaned_files(directory, max_age_hours=24):
@@ -461,6 +686,93 @@ def convert_pandas_types(obj):
     # Default case
     else:
         return obj
+
+
+def remove_plot_objects_from_result(data):
+    """
+    Recursively remove plot objects (Plotly figures, matplotlib figures, etc.)
+    from the result dictionary to prevent JSON serialization errors.
+    """
+    import plotly.graph_objects as go
+    import plotly.graph_objs as graph_objs
+
+    def is_plot_object(obj):
+        """Check if an object is a plotting object that should be excluded"""
+        # Check for Plotly Figure objects
+        if hasattr(go, 'Figure') and isinstance(obj, go.Figure):
+            return True
+        if hasattr(graph_objs, 'Figure') and isinstance(obj, graph_objs.Figure):
+            return True
+
+        # Check for matplotlib figures
+        try:
+            import matplotlib.figure
+            if isinstance(obj, matplotlib.figure.Figure):
+                return True
+        except ImportError:
+            pass
+
+        # Check for other common plotting objects by class name
+        obj_type_name = type(obj).__name__
+        plot_object_names = [
+            'Figure', 'Axes', 'Artist', 'Plot', 'Chart',
+            'Visualization', 'Graph', 'PlotlyFigure'
+        ]
+
+        if any(plot_name in obj_type_name for plot_name in plot_object_names):
+            return True
+
+        # Check for objects with plotting-specific attributes
+        plot_attributes = ['data', 'layout', 'to_html', 'show', 'to_json']
+        if hasattr(obj, 'data') and hasattr(obj, 'layout') and hasattr(obj, 'show'):
+            return True
+
+        return False
+
+    def clean_dict(d):
+        """Recursively clean a dictionary"""
+        if not isinstance(d, dict):
+            return d
+
+        cleaned = {}
+        for key, value in d.items():
+            if is_plot_object(value):
+                print(f"Removed plot object from result: key='{key}', type={type(value).__name__}")
+                continue  # Skip this key-value pair
+            elif isinstance(value, dict):
+                cleaned[key] = clean_dict(value)
+            elif isinstance(value, list):
+                cleaned[key] = clean_list(value)
+            else:
+                cleaned[key] = value
+        return cleaned
+
+    def clean_list(lst):
+        """Recursively clean a list"""
+        cleaned = []
+        for item in lst:
+            if is_plot_object(item):
+                print(f"Removed plot object from result list: type={type(item).__name__}")
+                continue  # Skip this item
+            elif isinstance(item, dict):
+                cleaned.append(clean_dict(item))
+            elif isinstance(item, list):
+                cleaned.append(clean_list(item))
+            else:
+                cleaned.append(item)
+        return cleaned
+
+    # Handle different data types
+    if isinstance(data, dict):
+        return clean_dict(data)
+    elif isinstance(data, list):
+        return clean_list(data)
+    else:
+        # For non-dict/list data, check if it's a plot object
+        if is_plot_object(data):
+            print(f"Removed plot object from result: type={type(data).__name__}")
+            return None
+        return data
 
 # added in v4
 def merge_worksheets(worksheet_dict):
@@ -821,6 +1133,7 @@ def upload_file():
     skipped_worksheets = {}
     excluded_worksheets = {}
     worksheet_scores = {}
+    optimization_report = None
     
     try:
         if 'file' not in request.files:
@@ -853,11 +1166,11 @@ def upload_file():
                 return jsonify({'error': 'Multiple file upload is only supported for CSV files. For Excel files, please upload one file at a time.'}), 400
             if len(csv_files) != len(files):
                 return jsonify({'error': 'When uploading multiple files, all files must be CSV format.'}), 400
-        
+
         # Handle multiple CSV files
         if len(csv_files) > 1:
-            print(f"Processing {len(csv_files)} CSV files for combination into Excel workbook...")
-            
+            print(f"Processing {len(csv_files)} CSV files for intelligent merging...")
+
             # Save all CSV files temporarily
             csv_file_paths = []
             session_id = session_manager.get_current_session_id()
@@ -874,11 +1187,36 @@ def upload_file():
                 })
 
             try:
-                # Combine CSV files into Excel workbook
-                combined_excel_path, combined_filename, combined_worksheet_data = combine_csv_files_to_excel(csv_file_paths)
+                # Use enhanced CSV combination with merge
+                combined_excel_path, combined_filename, combined_worksheet_data = combine_csv_files_to_excel_with_merge(
+                    csv_file_paths)
 
                 # Associate combined file with session
                 file_cleanup_manager.associate_file_with_session(combined_excel_path, session_id, 'upload')
+
+                # NEW: Apply OnlyOffice optimization to combined CSV data
+                print(f"Applying OnlyOffice optimization to combined CSV data...")
+                optimized_combined_data, optimization_report = optimize_worksheet_data_for_onlyoffice(combined_worksheet_data)
+
+                # Create optimized Excel file for OnlyOffice
+                if optimization_report['worksheets_optimized'] > 0:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    optimized_filename = f"combined_csvs_optimized_{len(csv_files)}_files_{timestamp}.xlsx"
+                    optimized_excel_path = os.path.join(app.config['UPLOAD_FOLDER'], optimized_filename)
+
+                    with pd.ExcelWriter(optimized_excel_path, engine='openpyxl') as writer:
+                        for sheet_name, df in optimized_combined_data.items():
+                            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+                    # Use optimized file for OnlyOffice
+                    final_file_path = optimized_excel_path
+                    file_cleanup_manager.associate_file_with_session(optimized_excel_path, session_id, 'upload')
+
+                    print(f"OnlyOffice optimization applied: {optimization_report['summary_message']}")
+                else:
+                    # No optimization needed
+                    final_file_path = combined_excel_path
+                    optimization_report = None
 
                 # Clean up temporary CSV files
                 for csv_info in csv_file_paths:
@@ -886,24 +1224,34 @@ def upload_file():
                         os.remove(csv_info['path'])
                     except:
                         pass
-                
-                # Set up session variables for the combined workbook
+
+                # Determine if data was merged or kept as separate worksheets
+                if len(combined_worksheet_data) == 1 and 'Merged_Data' in combined_worksheet_data:
+                    # Data was merged
+                    print("CSV files were successfully merged into single dataset")
+                    set_current_filename(f"Merged_CSVs_{len(csv_files)}_files.xlsx")
+                    onlyoffice_display_filename = f"Merged_CSVs_{len(csv_files)}_files.xlsx"
+                    has_multiple_worksheets = False
+                else:
+                    # Data kept as separate worksheets
+                    print("CSV files kept as separate worksheets")
+                    set_current_filename(f"Combined_CSVs_{len(csv_files)}_files.xlsx")
+                    onlyoffice_display_filename = f"Combined_CSVs_{len(csv_files)}_files.xlsx"
+                    has_multiple_worksheets = len(combined_worksheet_data) > 1
+
+                # Set up session variables
                 set_worksheet_data(combined_worksheet_data)
                 set_active_worksheet(list(combined_worksheet_data.keys())[0])
                 set_current_data(combined_worksheet_data[list(combined_worksheet_data.keys())[0]])
-                set_current_filename(f"Combined_CSVs_{len(csv_files)}_files.xlsx")
-                has_multiple_worksheets = len(get_worksheet_data()) > 1
 
                 # Set variables for later processing
                 clean_worksheets = combined_worksheet_data
-                onlyoffice_display_filename = get_current_filename()
-                
-                print(f"Combined workbook created successfully with {len(get_worksheet_data())} worksheets")
-                print(f"Current filename set to: {get_current_filename()}")
-                
+
+                print(f"Combined workbook created successfully with {len(combined_worksheet_data)} worksheet(s)")
+
                 # Use the combined Excel file for OnlyOffice
                 final_file_path = combined_excel_path
-                
+
             except Exception as combine_error:
                 # Clean up temporary files on error
                 for csv_info in csv_file_paths:
@@ -912,7 +1260,7 @@ def upload_file():
                     except:
                         pass
                 raise combine_error
-        
+
         # Handle single file (CSV or Excel)
         else:
             file = files[0]
@@ -954,8 +1302,7 @@ def upload_file():
                     print("  Reading Excel file with enhanced worksheet filtering and recovery...")
 
                     try:
-                        clean_worksheets, skipped_worksheets, worksheet_scores = filter_and_read_clean_worksheets(
-                            filepath)
+                        clean_worksheets, skipped_worksheets, worksheet_scores = filter_and_read_clean_worksheets(filepath)
 
                         if not clean_worksheets:
                             error_msg = "No properly formatted worksheets found in Excel file."
@@ -968,7 +1315,81 @@ def upload_file():
 
                             raise Exception(error_msg)
 
+                        # Apply text standardization BEFORE setting worksheet data
+                        standardization_summary = None
+                        if clean_worksheets:
+                            print("\n=== APPLYING TEXT STANDARDIZATION ===")
+                            standardized_worksheets, standardization_results = text_standardizer.standardize_worksheet_dict(
+                                clean_worksheets
+                            )
+
+                            # Generate summary
+                            standardization_summary = text_standardizer.get_standardization_summary(
+                                standardization_results)
+
+                            # Use standardized worksheets instead of original
+                            clean_worksheets = standardized_worksheets
+
+                            # Log results
+                            if standardization_summary['total_variants_resolved'] > 0:
+                                report = text_standardizer.generate_standardization_report(standardization_results)
+                                print(report)
+
+                            # Store standardization results in session for later reference
+                            try:
+                                session_obj = session_manager.get_current_session()
+                                session_obj.text_standardization_results = standardization_results
+                                session_obj.text_standardization_summary = standardization_summary
+                            except Exception as e:
+                                logger.warning(f"Could not store standardization results in session: {e}")
+
                         set_worksheet_data(clean_worksheets)
+
+                        # NEW: Check if we should merge multiple worksheets FIRST
+                        if len(get_worksheet_data()) > 1:
+                            print("Checking if Excel worksheets should be merged...")
+
+                            merge_attempted, merged_file_path, merged_filename, merged_or_original_data, merge_result = process_multi_worksheet_excel_with_merge(
+                                get_worksheet_data(), filename, app.config['UPLOAD_FOLDER']
+                            )
+
+                            if merge_attempted and merged_file_path:
+                                # Merge was successful - update everything to use merged data
+                                print("Excel worksheets successfully merged into single dataset")
+
+                                # Update session data to reflect merged result
+                                set_worksheet_data(merged_or_original_data)  # Now contains only 'Merged_Data'
+                                set_active_worksheet('Merged_Data')  # Direct assignment - no need to find "best"
+                                set_current_data(merged_or_original_data['Merged_Data'])  # set current data
+                                set_current_filename(f"{os.path.splitext(filename)[0]}_merged.xlsx")
+
+                                # Use merged file for later processing
+                                final_file_path = merged_file_path
+                                onlyoffice_display_filename = f"{os.path.splitext(filename)[0]}_merged.xlsx"
+
+                                # Associate merged file with session
+                                session_id = session_manager.get_current_session_id()
+                                file_cleanup_manager.associate_file_with_session(merged_file_path, session_id, 'upload')
+
+                                print(f"Merge summary: {merge_result.merge_summary}")
+                                print(f"Final merged data shape: {merged_or_original_data['Merged_Data'].shape}")
+
+                                # Reset template data since structure changed
+                                try:
+                                    session_obj = session_manager.get_current_session()
+                                    if session_obj.detected_template:
+                                        print("Resetting template data due to worksheet merge")
+                                        session_obj.detected_template = None
+                                        session_obj.template_validation_results = None
+                                        # Keep manual_template_override in case user wants to reapply manually
+                                except Exception as e:
+                                    print(f"Warning: Error resetting template data after merge: {e}")
+
+                                # Skip the best sheet selection since we now have only one sheet
+                                has_multiple_worksheets = False
+                            else:
+                                print("Excel worksheets kept as separate worksheets (no merge performed)")
+                                # Continue to best sheet selection below
 
                         # Select the worksheet with the most data as active
                         if len(get_worksheet_data()) == 1:
@@ -976,8 +1397,7 @@ def upload_file():
                             print(f"  Single worksheet - Active: '{get_active_worksheet()}'")
                         else:
                             # Find worksheet with highest data score
-                            best_sheet = max(worksheet_scores.keys(),
-                                             key=lambda sheet: worksheet_scores[sheet]['score'])
+                            best_sheet = max(worksheet_scores.keys(), key=lambda sheet: worksheet_scores[sheet]['score'])
                             set_active_worksheet(best_sheet)
 
                             print(f"  Selected worksheet with most data as active: '{get_active_worksheet()}'")
@@ -999,15 +1419,16 @@ def upload_file():
                         print(f"  Total clean worksheets loaded: {len(get_worksheet_data())}")
 
                         # CREATE CLEANED EXCEL FILE FOR ONLYOFFICE
+                        optimization_report = None
                         try:
-                            cleaned_file_path, cleaned_filename = create_cleaned_excel_for_onlyoffice(
+                            cleaned_file_path, cleaned_filename, optimization_report = create_cleaned_excel_for_onlyoffice(
                                 get_worksheet_data(), filename, app.config['UPLOAD_FOLDER']
                                 # Note: using get_worksheet_data() (filtered) not clean_worksheets
                             )
 
                             # Use cleaned file for OnlyOffice instead of original
                             final_file_path = cleaned_file_path
-                            onlyoffice_display_filename = f"{os.path.splitext(filename)[0]}_cleaned.xlsx"
+                            onlyoffice_display_filename = f"{os.path.splitext(filename)[0]}_optimized.xlsx"
 
                             # Create comprehensive summary of what was cleaned and excluded
                             total_original = len(clean_worksheets) + len(skipped_worksheets)
@@ -1021,17 +1442,21 @@ def upload_file():
                                     exclusion_details.append(f"{len(excluded_worksheets)} couldn't be analyzed")
 
                                 exclusion_summary = " and ".join(exclusion_details)
-                                print(f" OnlyOffice will show cleaned file ({len(get_worksheet_data())} worksheets kept, {total_excluded} removed: {exclusion_summary})")
+                                print(f" OnlyOffice will show optimized file ({len(get_worksheet_data())} worksheets kept, {total_excluded} removed: {exclusion_summary})")
                             else:
-                                print(
-                                    f" OnlyOffice will show cleaned file (all {len(get_worksheet_data())} worksheets kept, data moved to start at A1)")
+                                print(f" OnlyOffice will show optimized file (all {len(get_worksheet_data())} worksheets kept, data optimized for browser display)")
+
+                            # Add optimization information to display message
+                            if optimization_report and optimization_report['worksheets_optimized'] > 0:
+                                print(f" OnlyOffice optimization: {optimization_report['summary_message']}")
 
                         except Exception as cleanup_error:
-                            print(f"  Warning: Could not create cleaned file: {cleanup_error}")
-                            print(f"  OnlyOffice will show original file (may have formatting issues)")
+                            print(f"  Warning: Could not create optimized file: {cleanup_error}")
+                            print(f"  OnlyOffice will show original file (may have formatting and memory issues for larger datasets)")
                             # Fallback to original file
                             final_file_path = filepath
                             onlyoffice_display_filename = filename
+                            optimization_report = None
 
                         # Create enhanced user-friendly report
                         worksheet_report = create_worksheet_report_with_exclusions(
@@ -1310,6 +1735,46 @@ def upload_file():
             'is_combined_csv': len(csv_files) > 1,
             'csv_count': len(csv_files) if len(csv_files) > 1 else 0,
         }
+
+        # Add OnlyOffice optimization information
+        if optimization_report:
+            response_data['onlyoffice_optimization'] = {
+                'was_optimized': optimization_report['worksheets_optimized'] > 0,
+                'worksheets_optimized': optimization_report['worksheets_optimized'],
+                'memory_saved_mb': optimization_report['total_memory_saved_mb'],
+                'optimization_summary': optimization_report['summary_message'],
+                'optimization_warnings': []
+            }
+
+            # Collect all warnings from worksheet optimizations
+            for ws_name, ws_report in optimization_report['optimization_details'].items():
+                for warning in ws_report.get('warnings', []):
+                    response_data['onlyoffice_optimization']['optimization_warnings'].append(f"{ws_name}: {warning}")
+        else:
+            response_data['onlyoffice_optimization'] = {
+                'was_optimized': False,
+                'optimization_summary': 'No optimization applied'
+            }
+
+        # Add merge information to response if applicable
+        merge_info = {}
+        current_filename = get_current_filename()
+        if current_filename and ('merged' in current_filename.lower() or 'Merged_' in get_active_worksheet()):
+            merge_info = {
+                'data_was_merged': True,
+                'merge_type': 'csv_collection' if len(csv_files) > 1 else 'excel_worksheets',
+                'original_count': len(csv_files) if len(csv_files) > 1 else len(
+                    clean_worksheets) if 'clean_worksheets' in locals() else 0,
+                'active_worksheet': get_active_worksheet()
+            }
+        else:
+            merge_info = {
+                'data_was_merged': False,
+                'merge_type': None
+            }
+
+        response_data['merge_info'] = merge_info
+
         # Only add excel_processing_info for Excel files
         current_filename = get_current_filename()
         if not (current_filename and current_filename.endswith('.csv')) and len(csv_files) <= 1:
@@ -1323,15 +1788,23 @@ def upload_file():
         else:
             response_data['excel_processing_info'] = None
 
-        # Enhanced success message with cleaning information
+        # Enhanced success message with merge information
         if len(csv_files) > 1:
-            csv_info = f" Combined {len(csv_files)} CSV files into a single Excel workbook with multiple worksheets."
-            worksheet_info = f" The file contains {len(get_worksheet_data())} worksheets - you can switch between them using OnlyOffice."
-            multi_sheet_tip = " You can ask questions about specific worksheets or analyze data across all worksheets!"
+            if merge_info['data_was_merged']:
+                csv_info = f" Intelligently merged {len(csv_files)} CSV files into a single unified dataset based on common columns."
+                worksheet_info = " All your data is now in one worksheet for easier analysis."
+                multi_sheet_tip = " Ask questions about your merged data!"
+            else:
+                csv_info = f" Combined {len(csv_files)} CSV files into separate worksheets (no common columns for merging)."
+                worksheet_info = f" The file contains {len(get_worksheet_data())} worksheets - you can switch between them using OnlyOffice."
+                multi_sheet_tip = " You can ask questions about specific worksheets or analyze data across all worksheets!"
             cleaning_info = ""
         else:
             csv_info = ""
-            if has_multiple_worksheets:
+            if merge_info['data_was_merged']:
+                worksheet_info = " Multiple worksheets were intelligently merged into a single dataset for easier analysis."
+                multi_sheet_tip = " Ask questions about your merged data!"
+            elif has_multiple_worksheets:
                 worksheet_info = f" The file contains {len(get_worksheet_data())} worksheets - you can switch between them using OnlyOffice."
                 multi_sheet_tip = " You can ask questions about specific worksheets or analyze data across all worksheets!"
             else:
@@ -1358,11 +1831,21 @@ def upload_file():
 
                 cleaning_info += " The OnlyOffice editor shows only your analyzable, cleaned data."
 
+        # Add OnlyOffice optimization information to the message
+        optimization_info = ""
+        if optimization_report and optimization_report['worksheets_optimized'] > 0:
+            optimization_info = f"  OnlyOffice display optimized for better browser performance - saved ~{optimization_report['total_memory_saved_mb']:.0f}MB memory."
+
+            # Add specific optimization warnings if any
+            total_warnings = sum(len(ws_report.get('warnings', [])) for ws_report in optimization_report['optimization_details'].values())
+            if total_warnings > 0:
+                optimization_info += f" Note: Large dataset was intelligently sampled for display while your full data remains available for analysis."
+
         # Final success message
         display_filename_for_message = get_current_filename() or "your file"
         success_message = (f'File "{display_filename_for_message}" loaded successfully!{csv_info} '
                            f'Your data is now in the OnlyOffice spreadsheet with {get_current_data().shape[0]} rows and {get_current_data().shape[1]} columns.'
-                           f'{worksheet_info}{cleaning_info}{multi_sheet_tip} '
+                           f'{worksheet_info}{cleaning_info}{optimization_info}{multi_sheet_tip} '
                            f'Ask me questions about your data and I\'ll provide analysis and visualizations!')
 
         print(f"Upload completed successfully \n {success_message}")
@@ -1596,27 +2079,6 @@ DataFrame variable names:
 Use these exact variable names to access the data in your Python code.
         """
 
-        # Enhanced session history context for better follow-up support
-        current_session_history = get_session_history()
-        if current_session_history:
-            try:
-                # Use enhanced context creation
-                context = enhance_session_context(context, current_session_history, user_query)
-                logger.info(f"Enhanced session context applied with {len(current_session_history)} history entries")
-            except Exception as context_error:
-                logger.warning(f"Failed to enhance session context: {context_error}")
-                # Fallback to basic session history (existing code)
-                context += f"\n\nSESSION HISTORY (Previous {len(current_session_history)} interactions):\n"
-                for i, entry in enumerate(current_session_history[-10:], 1):
-                    context += f"\n{i}. USER: {entry['query']}\n"
-                    if entry.get('result_summary'):
-                        context += f"   RESULT: {entry['result_summary']}\n"
-        
-        print(f"Context created. Active worksheet: {active_worksheet}")
-        if len(worksheet_data) > 1:
-            print(f"Multi-worksheet context includes {len(worksheet_data)} worksheets")
-        print(f"Session history entries: {len(get_session_history())}")
-
         # ENHANCED TEMPLATE SUPPORT (Multi-Worksheet)
         # ============================================================================
         # Create enhanced context if template is available
@@ -1650,7 +2112,32 @@ Use these exact variable names to access the data in your Python code.
             if data_summary.get('enhanced_profiling_available', False):
                 context = format_enhanced_context_for_llm(data_summary, context)
 
-        #print("Full Context: \n", context)
+        # Enhanced session history context for better follow-up support
+        current_session_history = get_session_history()
+        if current_session_history:
+            try:
+                # Use enhanced context creation
+                context = enhance_session_context(context, current_session_history, user_query)
+                logger.info(
+                    f"Enhanced session context applied with {len(current_session_history)} history entries")
+            except Exception as context_error:
+                logger.warning(f"Failed to enhance session context: {context_error}")
+                # Fallback to basic session history (existing code)
+                context += f"\n\nSESSION HISTORY (Previous {len(current_session_history)} interactions):\n"
+                for i, entry in enumerate(current_session_history[-10:], 1):
+                    context += f"\n{i}. USER: {entry['query']}\n"
+                    if entry.get('result_summary'):
+                        context += f"   RESULT: {entry['result_summary']}\n"
+
+        print(f"Context created. Active worksheet: {active_worksheet}")
+        if len(worksheet_data) > 1:
+            print(f"Multi-worksheet context includes {len(worksheet_data)} worksheets")
+        print(f"Session history entries: {len(get_session_history())}")
+
+        if len(current_session_history) > 0:
+            print("DEBUG: follow-up Context: \n", context)
+        else:
+            print("DEBUG: init Context: \n", context)
 
         # Process query with the agent
         try:
@@ -1730,39 +2217,62 @@ Use these exact variable names to access the data in your Python code.
 
         # Update session history with successful queries
         if result['success']:
-            # Create a summary of the result for context (avoid storing large data)
-            result_summary = ""
-            if result.get('result'):
-                if isinstance(result['result'], str):
-                    result_summary = result['result'][:200] + "..." if len(str(result['result'])) > 200 else str(result['result'])
-                elif isinstance(result['result'], (dict, list)):
-                    result_summary = f"Data structure with {len(result['result'])} items" if hasattr(result['result'], '__len__') else "Complex data result"
-                else:
-                    result_summary = str(result['result'])[:200] + "..." if len(str(result['result'])) > 200 else str(result['result'])
-            
-            # Add to session history
+            # since plot_data is a separate key, ensure result.result doesn't contain any plot objects
+            result['result'] = remove_plot_objects_from_result(result['result'])
+
+            # Use enhanced result summary creation
+            result_summary = create_result_summary(result.get('result'))
+
+            # Check if this is a follow-up query
+            current_history = get_session_history()
+            is_follow_up = is_follow_up_query(user_query, current_history)
+
+            # Enforce 10 query limit BEFORE adding new entry
+            if len(current_history) >= 10:
+                logger.info(f"Follow-up limit reached ({len(current_history)} queries), removing oldest")
+                # Keep only last 9 entries to make room for new one
+                current_history = current_history[-9:]
+                set_session_history(current_history)
+
+            # Add to session history with enhanced context
             session_entry = {
                 'query': user_query,
                 'code': result.get('code', ''),
-                'result_summary': result_summary,
+                'result_summary': result_summary,  # Now properly comprehensive
                 'timestamp': datetime.now().isoformat(),
-                'success': True
+                'success': True,
+                'is_follow_up': is_follow_up,
+                'result_type': result.get('result_type', 'unknown'),
+                'has_plot': bool(result.get('plot_data', {})),
+                'worksheet_used': active_worksheet if worksheet_data and len(worksheet_data) > 1 else None
             }
-            
-            add_to_session_history(session_entry)
-            
-            print(f"Added entry to session history. Total entries: {len(get_session_history())}")
 
-        # Add follow-up suggestions for enhanced user experience
-        if result['success']:
+            add_to_session_history(session_entry)
+
+            # Log session status
+            updated_history = get_session_history()
+            print(f"Session history updated: {len(updated_history)}/10 entries")
+            print(f"Query type: {'Follow-up' if is_follow_up else 'New'} query")
+            if result_summary:
+                print(f"Result summary length: {len(result_summary)} chars")
+
+            # Generate smart follow-up suggestions
             try:
-                followup_suggestions = get_follow_up_suggestions(get_session_history())
+                followup_suggestions = get_follow_up_suggestions(updated_history)
                 if followup_suggestions:
                     result['followup_suggestions'] = followup_suggestions
                     logger.info(f"Added {len(followup_suggestions)} follow-up suggestions")
             except Exception as suggestion_error:
                 logger.warning(f"Failed to generate follow-up suggestions: {suggestion_error}")
-            
+
+        # Add session status info to response
+        result['session_info'] = {
+            'history_count': len(get_session_history()),
+            'max_follow_ups': 10,
+            'remaining_follow_ups': max(0, 10 - len(get_session_history())),
+            'is_follow_up': is_follow_up if 'is_follow_up' in locals() else False
+        }
+
         # Add metadata to result for frontend tracking
         result['query'] = user_query
         result['timestamp'] = datetime.now().isoformat()
@@ -1788,6 +2298,36 @@ Use these exact variable names to access the data in your Python code.
             'timestamp': datetime.now().isoformat(),
             'output_id': str(uuid.uuid4())
         }), 500
+
+###### Helper function to get session status
+@app.route('/api/session/status', methods=['GET'])
+def get_session_status():
+    """Get current session status including follow-up count"""
+    try:
+        history = get_session_history()
+
+        # Get last few queries for context
+        recent_queries = []
+        for entry in history[-3:]:  # Last 3 queries
+            recent_queries.append({
+                'query': entry.get('query', ''),
+                'timestamp': entry.get('timestamp', ''),
+                'was_follow_up': entry.get('is_follow_up', False)
+            })
+
+        return jsonify({
+            'success': True,
+            'current_count': len(history),
+            'max_follow_ups': 10,
+            'remaining': max(0, 10 - len(history)),
+            'at_limit': len(history) >= 10,
+            'recent_queries': recent_queries,
+            'has_context': len(history) > 0
+        })
+    except Exception as e:
+        logger.error(f"Error getting session status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 ###### template specific routes
 @app.route('/api/templates', methods=['GET'])
