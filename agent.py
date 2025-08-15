@@ -3063,7 +3063,7 @@ WORKSHEET MERGING:
         except Exception as e:
             sys.stdout = old_stdout if 'old_stdout' in locals() else sys.stdout
             duration = time.time() - start_time
-            
+            print("Erroneous code: \n", state['generated_code'])
             state['raw_exception'] = str(e)  # Raw pandas error for correction logic
             state['error'] = self._format_error_message(e, current_data)
             state['execution_result'] = ""

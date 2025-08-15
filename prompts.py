@@ -1264,6 +1264,39 @@ result = result.reset_index()
 - **ALWAYS** standardize timezones before operations: `.dt.tz_localize(None)`
 - **ALWAYS** sort by date before time-series operations
 - **NEVER** compare string dates - convert to datetime first
+- When working with pandas datetime operations, NEVER perform direct arithmetic between timestamps/DatetimeIndex and integers or arrays. This will cause errors in modern pandas versions.
+- If you need to do mathematical operations (addition, subtraction, indexing) for forecasting or analysis, work with numeric indices or position-based indexing, then map back to dates separately. Keep datetime operations purely for date manipulation using pandas datetime methods.
+- Never set datetime columns as DataFrame index if you plan to use shift(), rolling(), or similar positional operations
+
+### Timestamp Arithmetic Error Prevention Guide
+
+FORBIDDEN Operations:
+# DON'T DO THESE:
+timestamp + 5                    # Adding integer to timestamp
+timestamp - 10                   # Subtracting integer from timestamp  
+date_index + np.array([1,2,3])   # Adding array to DatetimeIndex
+pd.date_range('2024-01-01', periods=10) + 7  # Direct arithmetic
+
+CORRECT Approaches:
+1. Use pd.Timedelta for date arithmetic:
+timestamp + pd.Timedelta(days=5)
+timestamp + pd.Timedelta(hours=3)
+date_index + pd.Timedelta(weeks=1)
+2. Use numeric indices for mathematical operations:
+# For regression/forecasting, use numeric indices:
+X = np.arange(len(time_series)).reshape(-1, 1)  # Not timestamps
+future_indices = np.arange(len(data), len(data) + forecast_horizon)
+3. Use proper pandas datetime methods:
+# For resampling with gaps, use reindex instead:
+full_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
+df_reindexed = df.reindex(full_range, fill_value=0)
+# Use .dt accessor for datetime properties:
+df['day_of_week'] = df['date'].dt.dayofweek  # Not arithmetic
+4. For time-based calculations:
+# Generate future dates properly:
+future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=n, freq='D')
+# OR
+future_dates = pd.date_range(start='2024-06-01', end='2024-06-10', freq='D')
 
 ## MISSING VALUE HANDLING
 
