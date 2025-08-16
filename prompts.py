@@ -802,6 +802,39 @@ for col in numeric_cols:
 - Add hover information with business context
 - Include drill-down capabilities where possible
 - Use annotations for key insights or outliers
+
+4. Plotly Line Instructions
+- Never use add_vline() or add_hline()
+- Use add_shape() with add_annotation() instead
+
+INCORRECT - Use of add_vline() or add_hline():
+```python
+fig.add_vline(x=value, row=1, col=1) 
+fig.add_hline(y=value, row=1, col=1)
+```
+
+CORRECT - Use add_shape() instead:
+```python
+# Vertical line in subplot
+fig.add_shape(
+    type="line", x0=value, x1=value, y0=0, y1=1,
+    yref="y domain", line=dict(color="gray", width=2, dash="dot"),
+    row=1, col=1
+)
+
+# Horizontal line in subplot  
+fig.add_shape(
+    type="line", x0=0, x1=1, y0=value, y1=value,
+    xref="x domain", line=dict(color="gray", width=2, dash="dot"),
+    row=1, col=1
+)
+
+# Add annotation separately
+fig.add_annotation(
+    x=value, y=1, yref="y domain", text="Text",
+    showarrow=False, row=1, col=1
+)
+```
 """
 
 def get_data_preparation_patterns():
