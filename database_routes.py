@@ -74,9 +74,9 @@ def create_onlyoffice_document(file_path, original_filename):
         print(f"Error creating OnlyOffice document: {e}")
         raise e
 
-
+"""
 def convert_pandas_types(obj):
-    """Convert pandas types to JSON serializable types"""
+    # Convert pandas types to JSON serializable types
     # Handle strings first - they should NOT be converted to character lists
     if isinstance(obj, str):
         return obj
@@ -161,6 +161,115 @@ def convert_pandas_types(obj):
     # Default case
     else:
         return obj
+"""
+
+def _replace_non_finite_in_df(df: pd.DataFrame) -> pd.DataFrame:
+    # Convert non-finite floats and NaNs to None (which becomes null in JSON)
+    return df.replace({np.nan: None, np.inf: None, -np.inf: None})
+
+def _sanitize_float(x):
+    try:
+        # Handles both Python float and np.floating
+        if isinstance(x, (float, np.floating)):
+            return x if np.isfinite(x) else None
+        return x
+    except Exception:
+        return x
+
+def convert_pandas_types(obj):
+    """Convert pandas/NumPy/odd types to JSON-serializable, RFC 8259-valid values."""
+    # Strings unchanged
+    if isinstance(obj, str):
+        return obj
+
+    # ---- pandas containers ----
+    if isinstance(obj, pd.DataFrame):
+        try:
+            df = _replace_non_finite_in_df(obj)
+            # Convert to records then RECURSIVELY sanitize
+            records = df.to_dict(orient='records')
+            return [convert_pandas_types(rec) for rec in records]
+        except Exception:
+            return str(obj)
+
+    if isinstance(obj, pd.Series):
+        try:
+            ser = obj.replace({np.nan: None, np.inf: None, -np.inf: None})
+            return [convert_pandas_types(v) for v in ser.tolist()]
+        except Exception:
+            return str(obj)
+
+    if isinstance(obj, (pd.Index, pd.MultiIndex)):
+        try:
+            vals = list(obj)
+            return [convert_pandas_types(v) for v in vals]
+        except Exception:
+            return str(obj)
+
+    # pd.NA / NaN / None
+    try:
+        if pd.isna(obj):
+            return None
+    except Exception:
+        pass
+
+    # ---- numpy scalars/arrays ----
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        return _sanitize_float(float(obj))
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return [convert_pandas_types(v) for v in obj.tolist()]
+
+    # ---- datetime / timedelta ----
+    from datetime import date, datetime, time as dtime, timedelta
+    if isinstance(obj, (pd.Timestamp, datetime, date)):
+        # ISO 8601 for interop
+        return obj.isoformat()
+    if isinstance(obj, (pd.Timedelta, np.timedelta64, timedelta)):
+        return str(obj)
+
+    # ---- other common oddballs ----
+    try:
+        from decimal import Decimal
+        from uuid import UUID
+        from pathlib import Path
+    except Exception:
+        Decimal = UUID = Path = None
+
+    if Decimal is not None and isinstance(obj, Decimal):
+        # pick string to avoid precision surprises
+        return str(obj)
+    if UUID is not None and isinstance(obj, UUID):
+        return str(obj)
+    if Path is not None and isinstance(obj, Path):
+        return str(obj)
+
+    # ---- mappings and sequences ----
+    if isinstance(obj, dict):
+        return {str(k): convert_pandas_types(v) for k, v in obj.items()}
+
+    if isinstance(obj, (list, tuple, set)):
+        return [convert_pandas_types(v) for v in obj]
+
+    # Objects with .tolist()
+    if hasattr(obj, 'tolist'):
+        try:
+            return [convert_pandas_types(v) for v in obj.tolist()]
+        except Exception:
+            pass
+
+    # Final float safety
+    if isinstance(obj, float):
+        return _sanitize_float(obj)
+
+    # bool/int fine as-is; anything else: string fallback
+    if isinstance(obj, (bool, int)):
+        return obj
+
+    return str(obj)
 
 
 def remove_plot_objects_from_result(data):
@@ -267,8 +376,8 @@ def analyze_data(df):
     memory_usage = int(df.memory_usage(deep=True).sum())
 
     # Convert sample data safely
+    """
     def convert_pandas_types(obj):
-        """Convert pandas types to JSON serializable types"""
         if isinstance(obj, str):
             return obj
         try:
@@ -293,6 +402,7 @@ def analyze_data(df):
             return bool(obj)
         else:
             return obj
+    """
 
     sample_data = {}
     for col in df.columns:
