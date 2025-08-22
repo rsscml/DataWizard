@@ -1,0 +1,537 @@
+"""
+Text Standardization and Entity Resolution Module - Smart Version
+=================================================================
+
+This module provides intelligent text standardization without relying on 
+hardcoded protected terms lists. Uses smart algorithms to detect true variants
+vs. semantically different values.
+
+Features:
+- Character-level edit distance analysis
+- Word boundary awareness
+- Token-based difference detection
+- Automatic threshold adjustment based on string characteristics
+- Safe standardization without domain-specific lists
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Dict, List, Tuple, Optional, Any, Union, Set
+from collections import Counter
+import logging
+from fuzzywuzzy import fuzz, process
+import jellyfish
+import re
+from difflib import SequenceMatcher
+import Levenshtein
+
+logger = logging.getLogger(__name__)
+
+class ColumnStandardizationResult:
+    """Container for column standardization results"""
+    def __init__(self, column_name: str):
+        self.column_name = column_name
+        self.original_unique_count = 0
+        self.final_unique_count = 0
+        self.variants_found = 0
+        self.mappings = {}  # original -> standardized
+        self.frequency_changes = {}  # standardized value -> count increase
+        self.standardization_applied = False
+        
+class DatasetStandardizationResult:
+    """Container for complete dataset standardization results"""
+    def __init__(self, dataset_name: str):
+        self.dataset_name = dataset_name
+        self.columns_analyzed = 0
+        self.columns_standardized = 0
+        self.total_variants_resolved = 0
+        self.column_results = {}  # column_name -> ColumnStandardizationResult
+        self.processing_time = 0
+        self.success = True
+        self.errors = []
+
+class TextStandardizer:
+    """Smart text standardization without hardcoded protected terms"""
+    
+    def __init__(self, 
+                 base_threshold: int = 92,
+                 max_edit_distance: int = 2,
+                 min_frequency: int = 2,
+                 max_unique_ratio: float = 0.5,
+                 min_column_size: int = 5):
+        """
+        Initialize the standardizer with smart parameters.
+        
+        Args:
+            base_threshold: Base similarity threshold (0-100)
+            max_edit_distance: Maximum character edits allowed for matching
+            min_frequency: Minimum occurrences for a value to be standard
+            max_unique_ratio: Maximum ratio of unique values to total rows
+            min_column_size: Minimum non-null values in a column
+        """
+        self.base_threshold = base_threshold
+        self.max_edit_distance = max_edit_distance
+        self.min_frequency = min_frequency
+        self.max_unique_ratio = max_unique_ratio
+        self.min_column_size = min_column_size
+        self.standardization_history = {}
+    
+    def calculate_edit_distance(self, s1: str, s2: str) -> int:
+        """Calculate Levenshtein edit distance between two strings"""
+        try:
+            return Levenshtein.distance(s1, s2)
+        except:
+            # Fallback if python-Levenshtein not installed
+            return self._simple_edit_distance(s1, s2)
+    
+    def _simple_edit_distance(self, s1: str, s2: str) -> int:
+        """Simple edit distance implementation as fallback"""
+        if len(s1) < len(s2):
+            return self._simple_edit_distance(s2, s1)
+        if len(s2) == 0:
+            return len(s1)
+        
+        previous_row = range(len(s2) + 1)
+        for i, c1 in enumerate(s1):
+            current_row = [i + 1]
+            for j, c2 in enumerate(s2):
+                insertions = previous_row[j + 1] + 1
+                deletions = current_row[j] + 1
+                substitutions = previous_row[j] + (c1 != c2)
+                current_row.append(min(insertions, deletions, substitutions))
+            previous_row = current_row
+        
+        return previous_row[-1]
+    
+    def get_token_differences(self, s1: str, s2: str) -> Tuple[Set[str], Set[str], Set[str]]:
+        """
+        Get token-level differences between two strings.
+        
+        Returns:
+            (tokens_only_in_s1, tokens_only_in_s2, common_tokens)
+        """
+        # Tokenize by splitting on spaces and punctuation
+        tokens1 = set(re.findall(r'\b\w+\b', s1.lower()))
+        tokens2 = set(re.findall(r'\b\w+\b', s2.lower()))
+        
+        only_in_s1 = tokens1 - tokens2
+        only_in_s2 = tokens2 - tokens1
+        common = tokens1 & tokens2
+        
+        return only_in_s1, only_in_s2, common
+    
+    def is_likely_typo(self, s1: str, s2: str) -> bool:
+        """
+        Determine if the difference between two strings is likely a typo
+        vs. a meaningful semantic difference.
+        
+        This is the core intelligence - detecting true variants without protected terms.
+        """
+        s1_lower = s1.lower()
+        s2_lower = s2.lower()
+        
+        # Quick exact match check
+        if s1_lower == s2_lower:
+            return True
+        
+        # Calculate various metrics
+        edit_dist = self.calculate_edit_distance(s1_lower, s2_lower)
+        len_s1, len_s2 = len(s1), len(s2)
+        max_len = max(len_s1, len_s2)
+        min_len = min(len_s1, len_s2)
+        
+        # 1. Very short strings - only allow 1 edit
+        if max_len <= 5:
+            return edit_dist <= 1
+        
+        # 2. Check edit distance relative to string length
+        if edit_dist > self.max_edit_distance:
+            # Allow slightly more edits for very long strings
+            if max_len > 20 and edit_dist <= max(3, max_len * 0.15):
+                pass  # Continue checking
+            else:
+                return False
+        
+        # 3. Get token differences
+        only_s1, only_s2, common = self.get_token_differences(s1, s2)
+        
+        # If entire words are different, it's likely not a typo
+        if len(only_s1) > 0 and len(only_s2) > 0:
+            # Check if the different words are similar (potential typos)
+            for word1 in only_s1:
+                for word2 in only_s2:
+                    word_edit_dist = self.calculate_edit_distance(word1, word2)
+                    # If words are very different, not a typo
+                    if word_edit_dist > max(2, len(word1) * 0.3):
+                        return False
+        
+        # 4. Check for number differences (dates, quantities, etc.)
+        numbers1 = set(re.findall(r'\d+', s1))
+        numbers2 = set(re.findall(r'\d+', s2))
+        
+        if numbers1 != numbers2:
+            # Different numbers = different entities
+            return False
+        
+        # 5. Check character composition
+        # If most characters are the same but in different order, likely a typo
+        char_set1 = Counter(s1_lower.replace(' ', ''))
+        char_set2 = Counter(s2_lower.replace(' ', ''))
+        
+        common_chars = sum((char_set1 & char_set2).values())
+        total_chars = max(sum(char_set1.values()), sum(char_set2.values()))
+        
+        if total_chars > 0:
+            char_similarity = common_chars / total_chars
+            if char_similarity < 0.7:  # Less than 70% character overlap
+                return False
+        
+        # 6. Special case: Check for meaningful suffix/prefix differences
+        # Like "Premium" vs "Super Premium" - these are NOT typos
+        if s1_lower.endswith(s2_lower) or s2_lower.endswith(s1_lower):
+            # One is a subset of the other
+            longer = s1_lower if len(s1_lower) > len(s2_lower) else s2_lower
+            shorter = s2_lower if longer == s1_lower else s1_lower
+            prefix = longer.replace(shorter, '').strip()
+            
+            # If the prefix/suffix is a complete word, it's likely meaningful
+            if len(prefix) > 2 and prefix.replace('-', '').replace('_', '').isalnum():
+                return False
+        
+        # 7. Check for case-only differences (these ARE typos)
+        if s1_lower == s2_lower:
+            return True
+        
+        # 8. Check for punctuation/special character differences
+        s1_alphanum = re.sub(r'[^a-z0-9\s]', '', s1_lower)
+        s2_alphanum = re.sub(r'[^a-z0-9\s]', '', s2_lower)
+        if s1_alphanum == s2_alphanum:
+            return True  # Only punctuation differs
+        
+        # If we've made it here, use fuzzy ratio with dynamic threshold
+        similarity = fuzz.ratio(s1_lower, s2_lower)
+        
+        # Dynamic threshold based on string characteristics
+        threshold = self.base_threshold
+        
+        # Adjust threshold based on length (longer strings need higher similarity)
+        if max_len > 15:
+            threshold = min(95, threshold + 3)
+        if max_len > 25:
+            threshold = min(97, threshold + 2)
+        
+        # If strings have very different lengths, increase threshold
+        length_ratio = min_len / max_len if max_len > 0 else 1
+        if length_ratio < 0.7:
+            threshold = min(98, threshold + 5)
+        
+        return similarity >= threshold
+    
+    def should_standardize_column(self, series: pd.Series, column_name: str) -> Tuple[bool, str]:
+        """
+        Determine if a column should be standardized.
+        """
+        # Skip if column is mostly null
+        non_null_count = series.notna().sum()
+        if non_null_count < self.min_column_size:
+            return False, f"Too few non-null values ({non_null_count})"
+        
+        # Skip numeric columns (unless they're categorical)
+        if pd.api.types.is_numeric_dtype(series):
+            unique_values = series.dropna().unique()
+            if len(unique_values) > 20:
+                return False, "Numeric column with many unique values"
+        
+        # Skip datetime columns
+        if pd.api.types.is_datetime64_any_dtype(series):
+            return False, "Datetime column"
+        
+        # Check unique value ratio
+        unique_count = series.nunique()
+        unique_ratio = unique_count / len(series)
+        
+        if unique_ratio > self.max_unique_ratio:
+            return False, f"Too many unique values ({unique_count}/{len(series)} = {unique_ratio:.2%})"
+        
+        if unique_count < 2:
+            return False, "Only one unique value"
+        
+        return True, f"Categorical column with {unique_count} unique values"
+    
+    def find_variants_smart(self, values: List[Any], column_name: str) -> Dict[Any, Any]:
+        """
+        Find variants using smart typo detection without protected terms.
+        """
+        # Count frequencies
+        value_counts = Counter(values)
+        
+        # Filter out None/NaN values
+        valid_values = [v for v in value_counts.keys() if pd.notna(v)]
+        if not valid_values:
+            return {}
+        
+        # Sort by frequency (most common first = likely correct)
+        sorted_values = sorted(valid_values, key=lambda x: value_counts[x], reverse=True)
+        
+        # Build mapping
+        mapping = {}
+        already_mapped = set()
+        
+        for standard_value in sorted_values:
+            if standard_value in already_mapped:
+                continue
+            
+            # This value maps to itself
+            mapping[standard_value] = standard_value
+            already_mapped.add(standard_value)
+            
+            # Find potential typos of this value
+            for candidate_value in sorted_values:
+                if candidate_value in already_mapped or candidate_value == standard_value:
+                    continue
+                
+                # Check if this is likely a typo
+                if self.is_likely_typo(str(standard_value), str(candidate_value)):
+                    # Additional frequency check - don't merge if both are very common
+                    std_freq = value_counts[standard_value]
+                    cand_freq = value_counts[candidate_value]
+                    total_occurrences = sum(value_counts.values())
+                    
+                    # If both values are common (>10% of total), be more careful
+                    if std_freq > total_occurrences * 0.1 and cand_freq > total_occurrences * 0.1:
+                        # Need very high similarity for common values
+                        similarity = fuzz.ratio(str(standard_value).lower(), str(candidate_value).lower())
+                        if similarity < 95:
+                            continue
+                    
+                    mapping[candidate_value] = standard_value
+                    already_mapped.add(candidate_value)
+                    logger.debug(f"Column '{column_name}': '{candidate_value}' -> '{standard_value}' (likely typo)")
+        
+        return mapping
+    
+    def standardize_column(self, series: pd.Series, column_name: str) -> Tuple[pd.Series, ColumnStandardizationResult]:
+        """
+        Standardize a single column using smart typo detection.
+        """
+        result = ColumnStandardizationResult(column_name)
+        result.original_unique_count = series.nunique()
+        
+        # Check if column should be standardized
+        should_standardize, reason = self.should_standardize_column(series, column_name)
+        
+        if not should_standardize:
+            logger.info(f"Skipping column '{column_name}': {reason}")
+            result.standardization_applied = False
+            return series.copy(), result
+        
+        logger.info(f"Standardizing column '{column_name}': {reason}")
+        
+        # Get unique values
+        unique_values = series.dropna().tolist()
+        
+        # Find variants using smart detection
+        mapping = self.find_variants_smart(unique_values, column_name)
+        
+        # Count actual changes
+        changes = {k: v for k, v in mapping.items() if k != v}
+        
+        if not changes:
+            logger.info(f"No variants found in column '{column_name}'")
+            result.standardization_applied = False
+            return series.copy(), result
+        
+        # Apply mapping
+        standardized_series = series.map(lambda x: mapping.get(x, x))
+        
+        # Update result
+        result.final_unique_count = standardized_series.nunique()
+        result.variants_found = len(changes)
+        result.mappings = changes
+        result.standardization_applied = True
+        
+        logger.info(f"Column '{column_name}': Reduced {result.original_unique_count} unique values to {result.final_unique_count} ({result.variants_found} variants resolved)")
+        
+        return standardized_series, result
+    
+    def standardize_dataframe(self, df: pd.DataFrame, dataset_name: str = "dataset",
+                             columns_to_standardize: Optional[List[str]] = None) -> Tuple[pd.DataFrame, DatasetStandardizationResult]:
+        """
+        Standardize all suitable columns in a DataFrame.
+        """
+        import time
+        start_time = time.time()
+        
+        result = DatasetStandardizationResult(dataset_name)
+        standardized_df = df.copy()
+        
+        # Determine columns to process
+        if columns_to_standardize:
+            columns = [col for col in columns_to_standardize if col in df.columns]
+        else:
+            columns = df.columns.tolist()
+        
+        result.columns_analyzed = len(columns)
+        
+        # Process each column
+        for column in columns:
+            try:
+                standardized_series, col_result = self.standardize_column(df[column], column)
+                
+                if col_result.standardization_applied:
+                    standardized_df[column] = standardized_series
+                    result.columns_standardized += 1
+                    result.total_variants_resolved += col_result.variants_found
+                
+                result.column_results[column] = col_result
+                
+            except Exception as e:
+                logger.error(f"Error standardizing column '{column}': {e}")
+                result.errors.append(f"Column '{column}': {str(e)}")
+        
+        result.processing_time = time.time() - start_time
+        result.success = len(result.errors) == 0
+        
+        logger.info(f"Dataset '{dataset_name}': Standardized {result.columns_standardized}/{result.columns_analyzed} columns, resolved {result.total_variants_resolved} variants in {result.processing_time:.2f}s")
+        
+        return standardized_df, result
+    
+    def standardize_worksheet_dict(self, worksheets: Dict[str, pd.DataFrame]) -> Tuple[Dict[str, pd.DataFrame], Dict[str, DatasetStandardizationResult]]:
+        """
+        Standardize multiple worksheets.
+        """
+        standardized_worksheets = {}
+        results = {}
+        
+        for worksheet_name, df in worksheets.items():
+            logger.info(f"Processing worksheet: {worksheet_name}")
+            standardized_df, result = self.standardize_dataframe(df, worksheet_name)
+            standardized_worksheets[worksheet_name] = standardized_df
+            results[worksheet_name] = result
+        
+        return standardized_worksheets, results
+    
+    def generate_standardization_report(self, results: Union[DatasetStandardizationResult, Dict[str, DatasetStandardizationResult]]) -> str:
+        """
+        Generate a human-readable standardization report.
+        """
+        report_lines = []
+        report_lines.append("=" * 60)
+        report_lines.append("TEXT STANDARDIZATION REPORT")
+        report_lines.append("=" * 60)
+        
+        if isinstance(results, DatasetStandardizationResult):
+            results = {"Dataset": results}
+        
+        total_variants = 0
+        total_columns_standardized = 0
+        
+        for dataset_name, result in results.items():
+            report_lines.append(f"\nDataset: {dataset_name}")
+            report_lines.append("-" * 40)
+            
+            if not result.success:
+                report_lines.append(f"⚠️ Errors occurred: {', '.join(result.errors)}")
+            
+            report_lines.append(f"Columns analyzed: {result.columns_analyzed}")
+            report_lines.append(f"Columns standardized: {result.columns_standardized}")
+            report_lines.append(f"Total variants resolved: {result.total_variants_resolved}")
+            report_lines.append(f"Processing time: {result.processing_time:.2f}s")
+            
+            if result.columns_standardized > 0:
+                report_lines.append("\nStandardized columns:")
+                
+                for col_name, col_result in result.column_results.items():
+                    if col_result.standardization_applied:
+                        report_lines.append(f"\n  📊 {col_name}:")
+                        report_lines.append(f"     Original unique values: {col_result.original_unique_count}")
+                        report_lines.append(f"     Final unique values: {col_result.final_unique_count}")
+                        report_lines.append(f"     Variants resolved: {col_result.variants_found}")
+                        
+                        if col_result.mappings:
+                            report_lines.append("     Sample standardizations:")
+                            for original, standard in list(col_result.mappings.items())[:5]:
+                                report_lines.append(f"       '{original}' → '{standard}'")
+                            
+                            if len(col_result.mappings) > 5:
+                                report_lines.append(f"       ... and {len(col_result.mappings) - 5} more")
+            
+            total_variants += result.total_variants_resolved
+            total_columns_standardized += result.columns_standardized
+        
+        report_lines.append("\n" + "=" * 60)
+        report_lines.append("SUMMARY")
+        report_lines.append("=" * 60)
+        report_lines.append(f"Total datasets processed: {len(results)}")
+        report_lines.append(f"Total columns standardized: {total_columns_standardized}")
+        report_lines.append(f"Total variants resolved: {total_variants}")
+        
+        return "\n".join(report_lines)
+    
+    def get_standardization_summary(self, results: Union[DatasetStandardizationResult, Dict[str, DatasetStandardizationResult]]) -> Dict[str, Any]:
+        """
+        Get a summary of standardization results as a dictionary.
+        """
+        if isinstance(results, DatasetStandardizationResult):
+            results = {"Dataset": results}
+        
+        summary = {
+            'datasets_processed': len(results),
+            'total_columns_analyzed': sum(r.columns_analyzed for r in results.values()),
+            'total_columns_standardized': sum(r.columns_standardized for r in results.values()),
+            'total_variants_resolved': sum(r.total_variants_resolved for r in results.values()),
+            'total_processing_time': sum(r.processing_time for r in results.values()),
+            'success': all(r.success for r in results.values()),
+            'datasets': {}
+        }
+        
+        for dataset_name, result in results.items():
+            summary['datasets'][dataset_name] = {
+                'columns_standardized': result.columns_standardized,
+                'variants_resolved': result.total_variants_resolved,
+                'standardized_columns': [col for col, res in result.column_results.items() 
+                                        if res.standardization_applied]
+            }
+        
+        return summary
+
+# Convenience functions
+def standardize_data(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], 
+                     max_edit_distance: int = 2,
+                     base_threshold: int = 92,
+                     columns_to_standardize: Optional[List[str]] = None,
+                     verbose: bool = True) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+    """
+    Convenience function to standardize data with smart typo detection.
+    
+    Args:
+        data: DataFrame or dictionary of DataFrames
+        max_edit_distance: Maximum character edits allowed
+        base_threshold: Base similarity threshold (0-100)
+        columns_to_standardize: Specific columns to process (None = auto)
+        verbose: Whether to print report
+        
+    Returns:
+        Standardized data in same format as input
+    """
+    standardizer = TextStandardizer(
+        base_threshold=base_threshold,
+        max_edit_distance=max_edit_distance
+    )
+    
+    if isinstance(data, pd.DataFrame):
+        standardized_df, result = standardizer.standardize_dataframe(
+            data, "data", columns_to_standardize
+        )
+        
+        if verbose:
+            print(standardizer.generate_standardization_report(result))
+        
+        return standardized_df
+    else:
+        standardized_worksheets, results = standardizer.standardize_worksheet_dict(data)
+        
+        if verbose:
+            print(standardizer.generate_standardization_report(results))
+        
+        return standardized_worksheets

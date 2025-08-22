@@ -375,35 +375,6 @@ def analyze_data(df):
     # Get memory usage as regular int
     memory_usage = int(df.memory_usage(deep=True).sum())
 
-    # Convert sample data safely
-    """
-    def convert_pandas_types(obj):
-        if isinstance(obj, str):
-            return obj
-        try:
-            if pd.isna(obj):
-                return None
-        except (ValueError, TypeError):
-            pass
-        if hasattr(obj, 'dtype'):
-            if pd.api.types.is_integer_dtype(obj.dtype):
-                return int(obj) if pd.notna(obj) else None
-            elif pd.api.types.is_float_dtype(obj.dtype):
-                return float(obj) if pd.notna(obj) else None
-            elif pd.api.types.is_bool_dtype(obj.dtype):
-                return bool(obj) if pd.notna(obj) else None
-            else:
-                return str(obj) if pd.notna(obj) else None
-        elif isinstance(obj, (np.integer, np.int64, np.int32)):
-            return int(obj)
-        elif isinstance(obj, (np.floating, np.float64, np.float32)):
-            return float(obj)
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        else:
-            return obj
-    """
-
     sample_data = {}
     for col in df.columns:
         sample_data[col] = [convert_pandas_types(val) for val in df[col].head().tolist()]

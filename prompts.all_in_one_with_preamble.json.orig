@@ -1,0 +1,1010 @@
+{
+  "preamble": "This JSON contains structured prompts for code generation. Each section has 'instruction' (guidelines) and 'examples' (short code snippets). Use the most relevant sections and micro_templates based on the user query. Do not output irrelevant sections. Prioritize conciseness and correctness.\n\n---\n\nCRITICAL EXECUTION RULES:\n- FIRST lines MUST paste the MANDATORY HEADER that auto-aliases the active DataFrame to `df`.\n- ONLY use exact column names from the data - never use placeholders\n- NEVER include import statements - all functions are pre-imported\n- ALWAYS assign final results to 'result' variable\n- For visualizations, assign to 'fig' and set descriptive result message\n- For EVERY question, produce BOTH:\n  (a) a visualization assigned to `fig` (when even remotely meaningful), and\n  (b) a data artifact assigned to `result` (scalar / list / tuple / dict / Series / DataFrame).\n- If a visualization is not meaningful (e.g., no numeric or categorical fields; too few rows; purely textual task), set `fig = None` and briefly justify in a comment.\n- Never return a visualization without a `result`. Charts must be backed by the exact data or summary used to draw them.\n- For text-heavy questions & datasets, attempt a word cloud visualization in addition to tabular/text results.\n- Use comprehensive error handling and data validation\n- DO NOT alter or sanitize column names or any string or object values contained within columns! Always use exact column names & values as they appear in the dataframe.\n- If the result can be best shown as a visualization/chart/plot, please prefer that\n- Multi time period analyses, if they result in multiperiod output should be shown as charts\n- Prefer tables or lists; allow small dicts for metric summaries or model parameters. Avoid deeply nested or verbose dict/json outputs.\n- Apply business intelligence best practices throughout\n\nCRITICAL RESULT ASSIGNMENT RULES:\n1. ALWAYS assign meaningful results to variables, NEVER use print() for final results:\n   CORRECT:\n   result = summary_stats\n   result = correlation_matrix\n   result = top_customers.head(10)\n\n   INCORRECT:\n   result = print(\"Analysis complete\")\n   result = print(summary_stats)\n   print(correlation_matrix)  # without assignment\n\n2. PRIORITIZE data objects over text summaries:\n   PREFER: result = filtered_data\n   AVOID: result = \"Found 50 records\"\n\n3. NEVER end with print statements:\n   INCORRECT:\n   ```python \n   df.groupby('category').sum().plot()\n   result = print(\"Chart created\")\n   ```\n   CORRECT:\n   ```python\n   grouped_data = df.groupby('category').sum()\n   fig = px.bar(grouped_data.reset_index(), x='category', y='sales')\n   result = grouped_data\n   ```\n\n4. Use descriptive variable names for intermediate steps:\n   For e.g.,\n   ```python\n   analysis_summary = df.groupby('category')['value_col'].agg(['sum', 'mean', 'std'])\n   result = analysis_summary\n   ```\n5. Never return only a figure. `result` is mandatory; `fig` is additive.\n\nREMEMBER: The 'result' variable will be displayed to the user, so make it meaningful!\nGenerate Python code that produces actionable business insights using advanced analytics.\nOnly return the Python code, no explanations.",
+  "meta": {
+    "name": "DataScience CodeGen Prompt Pack — All-in-One",
+    "purpose": "Generate correct, runnable Python for Data Scientist/Data Analys/Business Analyst tasks using ONLY preloaded globals; no imports. Set tabular/text/Dict/List/Scalar outputs to `result`, Plotly visuals to `fig`."
+  },
+  "runtime_environment": {
+    "available_globals_summary": [
+      "pd,np,px,go,result,fig",
+      "Sklearn models: Linear/Ridge/Lasso/ElasticNet, LogisticRegression, SVC/SVR, RF/GB, KNN, DecisionTree",
+      "Preprocessors: StandardScaler, MinMaxScaler, LabelEncoder, OneHotEncoder, PCA, TruncatedSVD, PolynomialFeatures, SelectKBest, RFE",
+      "Utils: train_test_split, cross_val_score, GridSearchCV, TimeSeriesSplit; metrics across regression/classification/clustering",
+      "SciPy: stats, signal, optimize, interpolate, correlations/tests, filters, Welch PSD",
+      "Statsmodels: sm, ARIMA/SARIMAX, ExponentialSmoothing, STL/seasonal_decompose, tests (ADF/KPSS/cointegration), ACF/PACF",
+      "Plotting: plt, sns (use Plotly for outputs)",
+      "GBDT libs: xgb, lgb, cb (+ estimators)",
+      "Prophet (univariate forecasting)",
+      "PyOD subset: IForest, LOF, OCSVM, KNN",
+      "Explainability: shap, LimeTabularExplainer",
+      "Optuna for HPO"
+    ],
+    "io_contract": {
+      "preconditions": [
+        "Assume at least one pandas DataFrame exists in globals. Auto-detect it and alias to `df` (supports names like `current_data`).",
+        "Fail gracefully if no DataFrame is found or required columns are missing/empty."
+      ],
+      "error_handling": [
+        "Wrap in try/except; set `result` to concise error with actionable hint.",
+        "No tracebacks/prints; include small summaries (shapes/head) when helpful."
+      ],
+      "perf": [
+        "Prefer vectorization; avoid row-wise Python loops.",
+        "Subset numeric cols with select_dtypes when needed; beware object dtype."
+      ],
+      "output_contract": [
+        "Always set BOTH: a data artifact in `result` AND (when meaningful) a Plotly figure in `fig`.",
+        "Exactly one Plotly figure. If a figure is not meaningful, set `fig = None` with a brief inline comment explaining why.",
+        "`result` must be the exact table/series/metrics that support the figure (e.g., grouped/pivoted frame behind the bar chart) in addition to any summaries.",
+        "`result` should also contain key insights, either as a statement or a list of statements, relevant to the output & the user question."
+      ]
+    },
+    "plotly_rules": [
+      "Prefer px.* for standard charts; use go.Figure for advanced layering.",
+      "Use add_shape + add_annotation instead of px.add_hline/add_vline.",
+      "Always set titles/axis labels; keep legends readable; avoid >30° tick rotation.",
+      "Dual axes via go layout (yaxis/yaxis2) and trace mapping; ensure clarity."
+    ]
+  },
+  "style_guide": {
+    "philosophy": [
+      "Deterministic, minimal, clearly commented blocks.",
+      "Short yet descriptive names (X, y, Xtr); one responsibility per block."
+    ],
+    "skeleton": "try:\n  # 1) Validate and alias DataFrame\n  # ---- MANDATORY HEADER (do not remove) ----\n  # Auto-detect any available DataFrame and alias to `df`\n  _candidates = [v for v in globals().values() if isinstance(v, pd.DataFrame) and len(v) > 0]\n  assert len(_candidates) > 0, \"Provide a valid DataFrame\"\n  if 'df' not in globals():\n      df = _candidates[0]\n  # ------------------------------------------\n  _candidates = [v for v in globals().values() if isinstance(v, pd.DataFrame) and len(v) > 0]\n  assert len(_candidates) > 0, \"Provide a valid DataFrame\"\n  if 'df' not in globals():\n      df = _candidates[0]\n\n  # 2) Prepare (columns/params)\n  # 3) Compute (tables/metrics behind any plots)\n  # 4) Visualize (create `fig` whenever meaningful; else set fig = None)\n  # 5) Outputs (ALWAYS set `result`)\n  result = ...  # data artifact backing the visualization (table/series/metrics)\n  fig = ...     # or None with a short comment if not meaningful\nexcept Exception as e:\n  result = f'Error: {type(e).__name__}: {e}'\n  fig = None"
+  },
+  "guardrails": {
+    "pandas_best_practices": [
+      "Use .loc for assignment; avoid chained indexing; use .copy() after filtering if modifying.",
+      "Reset index after groupby/merge/pivot to avoid confusing indices.",
+      "Merges: align dtypes; drop duplicate keys; set validate=('1:1','1:m', etc.) and indicator=True.",
+      "Prefer pivot_table with aggfunc + fill_value when duplicates possible.",
+      "Datetime: use pd.to_datetime; sort by date; use dt accessor for parts; do not compare raw strings.",
+      "Missingness: quantify first (df.isna().mean()); if <5% and safe, drop; else explicit imputation.",
+      "Categoricals: cast to 'category' before OneHotEncoder; keep mapping in `result` if needed.",
+      "Numerics: guard divisions; use np.divide(..., where=den!=0); ensure monotonicity before cumsum/diff.",
+      "Windows: set min_periods; label outputs clearly.",
+      "Aggregate before plotting (groupby/pivot) to keep charts legible; avoid plotting >5k raw points unless the task requires it."
+    ],
+    "numpy_guidelines": [
+      "Check shapes; use np.asarray; keepdims=True for reductions to preserve broadcasting.",
+      "Avoid explicit inverse; prefer lstsq/solve.",
+      "Use np.clip and np.isfinite to maintain numeric stability."
+    ],
+    "scipy_statsmodels_guidelines": [
+      "Report statistic + p-value; include effect sizes when meaningful.",
+      "Use parametric tests only if assumptions pass; otherwise non-parametric analogues.",
+      "Statsmodels regression: sm.add_constant, check VIF; consider robust SEs (HC3).",
+      "Time series: ensure frequency, stationarity checks, and residual diagnostics."
+    ],
+    "do_not": [
+      "Do NOT import modules or use I/O/network.",
+      "Do NOT print large tables; summarize shapes/head.",
+      "Do NOT mutate globals except `result` and `fig`.",
+      "Avoid seaborn theming; prefer Plotly output."
+    ]
+  },
+  "patterns": {
+    "validation": [
+      "assert set(required_cols).issubset(df.columns), f'Missing columns: {set(required_cols)-set(df.columns)}'",
+      "assert df.dropna(subset=required_cols).shape[0] > 0, 'No rows after dropping NA in required columns'"
+    ],
+    "reshape": {
+      "melt": "result = pd.melt(df, id_vars=id_cols, value_vars=val_cols, var_name='variable', value_name='value')",
+      "pivot_table": "result = pd.pivot_table(df, index=idx, columns=col, values=val, aggfunc=agg, fill_value=0).reset_index()"
+    },
+    "joins": [
+      "left = left.drop_duplicates(subset=on)",
+      "right = right.drop_duplicates(subset=on)",
+      "result = pd.merge(left, right, on=on, how=how, validate=validate, indicator=True)"
+    ],
+    "window_ops": [
+      "result = (df.sort_values(by=by).assign(roll_mean=lambda t: t[val].rolling(w, min_periods=max(1, w//3)).mean(),        roll_std=lambda t: t[val].rolling(w, min_periods=max(1, w//3)).std()))"
+    ]
+  },
+  "visualization": {
+    "chart_catalog": {
+      "time_series": [
+        "px.line(df, x=dt, y=val, markers=True)",
+        "px.area(df, x=dt, y=val)"
+      ],
+      "categorical": [
+        "px.bar(df, x=cat, y=val, barmode='group')",
+        "px.box(df, x=cat, y=val)"
+      ],
+      "distribution": [
+        "px.histogram(df, x=val, nbins=40)",
+        "px.violin(df, y=val, box=True)"
+      ],
+      "relationship": [
+        "px.scatter(df, x=x, y=y, trendline='ols')",
+        "px.scatter_matrix(df[cols])"
+      ],
+      "ranking": [
+        "px.bar(df.sort_values(val, ascending=False).head(k), x=cat, y=val)"
+      ],
+      "part_to_whole": [
+        "px.pie(df, names=cat, values=val)",
+        "px.treemap(df, path=path_cols, values=val)"
+      ],
+      "heatmaps": [
+        "px.imshow(df.corr(), text_auto=True, aspect='auto')"
+      ],
+      "waterfall": [
+        "go.Figure(go.Waterfall(x=labels, measure=measures, y=values))"
+      ],
+      "sankey": [
+        "go.Figure(go.Sankey(node=dict(label=nodes), link=dict(source=src, target=tgt, value=val)))"
+      ],
+      "indicators": [
+        "go.Figure(go.Indicator(mode='number+delta', value=curr, delta={'reference': ref}))"
+      ],
+      "facets": [
+        "px.line(df, x=dt, y=val, color=grp, facet_col=facet, facet_col_wrap=2)"
+      ],
+      "wordcloud_plotly": [
+        "Use for text-heavy outputs such as comments, reviews, logs, or schema text.",
+        "Steps:",
+        "1. Tokenize text and compute word frequencies (Counter).",
+        "2. Choose top N words.",
+        "3. Generate random x, y positions.",
+        "4. Scale textfont size proportional to frequency.",
+        "5. Build go.Scatter with mode='text'.",
+        "6. Hide axes/grid, set chart title."
+      ]
+    },
+    "overlays": [
+      "fig.add_shape(type='line', x0=v, x1=v, y0=0, y1=1, yref='y domain', line=dict(dash='dot'))",
+      "fig.add_annotation(x=v, y=1, yref='y domain', text=label, showarrow=False)",
+      "fig.update_layout(title=title, xaxis_title=xlab, yaxis_title=ylab)"
+    ],
+    "policy": [
+      "If there is at least one numeric column and (a) a time-like x, or (b) a categorical/group key, or (c) another numeric for relationships → produce a chart.",
+      "If categorical cardinality > 50 or points > 100k, sample or aggregate before plotting; note that in a comment.",
+      "Even if the task is textual/structural (e.g., schema, logs, errors), attempt a visualization if any structural or frequency-based representation is possible (e.g., bar chart of column counts, error type frequencies, timelines). Only set fig = None with a 1-line justification if absolutely no meaningful visualization can be made."
+    ]
+  },
+  "statistics": {
+    "assumptions": [
+      "Normality: shapiro(small n), normaltest(large n); QQ via probplot.",
+      "Variance: levene/bartlett.",
+      "Independence/IID by design/domain knowledge."
+    ],
+    "tests_parametric": [
+      "One-sample t: ttest_1samp(x, popmean)",
+      "Two-sample t (indep): ttest_ind(x, y, equal_var=(levene(x,y).pvalue>0.05))",
+      "Paired t: ttest_rel(a, b)",
+      "ANOVA: f_oneway(*groups) → posthoc pairwise_tukeyhsd if significant",
+      "Correlations: pearsonr(x,y), pointbiserialr(bin,y)"
+    ],
+    "tests_nonparametric": [
+      "Mann–Whitney U: mannwhitneyu(x,y, alternative='two-sided')",
+      "Wilcoxon signed-rank: wilcoxon(a,b)",
+      "Kruskal–Wallis: kruskal(*groups)",
+      "Friedman: friedmanchisquare(*blocks)",
+      "Rank correlations: spearmanr, kendalltau"
+    ],
+    "categorical": [
+      "Chi-square contingency: chi2_contingency(table)",
+      "Fisher exact (2x2): fisher_exact(table)",
+      "Proportions Z-test: proportions_ztest(count, nobs)"
+    ],
+    "effect_sizes": [
+      "Cohen d, Hedges g (small-sample correction)",
+      "Eta-squared for ANOVA: SS_between/SS_total"
+    ],
+    "power": [
+      "TTestPower for required n or achieved power at given effect and alpha."
+    ],
+    "ab_testing_micro": {
+      "two_sample_rates": [
+        "stat, p = proportions_ztest([conv_a, conv_b], [n_a, n_b])",
+        "lift = conv_b/n_b - conv_a/n_a",
+        "result = {'z': float(stat), 'p': float(p), 'lift': float(lift)}"
+      ],
+      "ci_for_rate": [
+        "p_hat = conv/n; se = (p_hat*(1-p_hat)/n)**0.5",
+        "ci = (p_hat - 1.96*se, p_hat + 1.96*se)",
+        "result = {'p_hat': float(p_hat), 'ci95': tuple(float(x) for x in ci)}"
+      ]
+    }
+  },
+  "anomalies": {
+    "detectors": [
+      "IsolationForest",
+      "LOF",
+      "OCSVM",
+      "KNN (PyOD)"
+    ],
+    "recipes": {
+      "iforest": [
+        "X = df[features].select_dtypes(include=[np.number]).dropna()",
+        "clf = IsolationForest(contamination=cont, random_state=42).fit(X)",
+        "labels = (clf.predict(X)==-1).astype(int)",
+        "result = df.assign(is_outlier=labels)"
+      ],
+      "lof": [
+        "X = df[features].select_dtypes(include=[np.number]).dropna()",
+        "det = LOF(contamination=cont)",
+        "labels = det.fit_predict(X)",
+        "result = df.assign(is_outlier=(labels==-1).astype(int))"
+      ],
+      "ocsvm": [
+        "X = df[features].select_dtypes(include=[np.number]).dropna()",
+        "det = OCSVM(nu=cont, kernel='rbf')",
+        "labels = det.fit_predict(X)",
+        "result = df.assign(is_outlier=(labels==-1).astype(int))"
+      ],
+      "knn_pyod": [
+        "X = df[features].select_dtypes(include=[np.number]).dropna()",
+        "det = KNN(contamination=cont, n_neighbors=k)",
+        "labels = det.fit_predict(X)",
+        "result = df.assign(is_outlier=(labels==1).astype(int))"
+      ]
+    },
+    "viz": [
+      "fig = px.scatter(df.assign(is_outlier=labels), x=features[0], y=features[1], color='is_outlier')"
+    ]
+  },
+  "ml": {
+    "data_prep": [
+      "Split via train_test_split (stratify=y for classification).",
+      "Scale numeric features for linear/SVM; not required for trees.",
+      "Encode categoricals via OneHotEncoder(handle_unknown='ignore').",
+      "Address imbalance via class_weight='balanced' or resampling; use AUC/F1."
+    ],
+    "model_families": {
+      "linear": [
+        "Regression: Linear/Ridge/Lasso/ElasticNet (tune alpha/l1_ratio).",
+        "Classification: LogisticRegression(max_iter=1000, penalty='l2'|'elasticnet', solver='saga')."
+      ],
+      "trees": [
+        "DecisionTree (max_depth, min_samples_*), RandomForest (n_estimators, max_depth, max_features), GradientBoosting."
+      ],
+      "svm": [
+        "SVC(probability=True): C, gamma, kernel; SVR: C, epsilon, gamma."
+      ],
+      "neighbors": [
+        "KNN (n_neighbors, weights)."
+      ],
+      "gbdt_libraries": [
+        "XGBRegressor/Classifier: n_estimators, max_depth, learning_rate, subsample, colsample_bytree, reg_lambda.",
+        "LGBMRegressor/Classifier: num_leaves, n_estimators, learning_rate, feature_fraction, bagging_fraction.",
+        "CatBoost*: depth, learning_rate, iterations; categorical-friendly (but provide numeric/one-hot here)."
+      ]
+    },
+    "evaluation": [
+      "Regression: RMSE/MAE/R2; residual plots; avoid leakage.",
+      "Classification: Accuracy, Precision/Recall/F1, ROC AUC; confusion_matrix, classification_report, PR curves for imbalance.",
+      "Clustering: silhouette_score, davies_bouldin_score; visualize 2D projection."
+    ],
+    "quick_workflows": {
+      "regression_baseline": [
+        "X = df[features].select_dtypes(include=[np.number]).dropna(); y = df[target].dropna()",
+        "ix = X.index.intersection(y.index); X,y = X.loc[ix], y.loc[ix]",
+        "Xtr,Xte,ytr,yte = train_test_split(X,y,test_size=0.2,random_state=42)",
+        "sc = StandardScaler(); Xtr_s,Xte_s = sc.fit_transform(Xtr), sc.transform(Xte)",
+        "models = {'Linear': LinearRegression(), 'Ridge': Ridge(), 'RF': RandomForestRegressor(random_state=42)}",
+        "rows=[]",
+        "for n,m in models.items():",
+        "  Xt_tr,Xt_te = (Xtr_s,Xte_s) if n in ['Linear','Ridge'] else (Xtr,Xte)",
+        "  m.fit(Xt_tr,ytr); yp = m.predict(Xt_te)",
+        "  rows.append({'Model':n,'RMSE':float(np.sqrt(mean_squared_error(yte,yp))),'MAE':float(mean_absolute_error(yte,yp)),'R2':float(r2_score(yte,yp))})",
+        "result = pd.DataFrame(rows)"
+      ],
+      "classification_baseline": [
+        "X = df[features].dropna(); y = df[target].dropna()",
+        "if y.dtype=='object': y = LabelEncoder().fit_transform(y)",
+        "ix = X.index.intersection(pd.Series(y).index); X,y = X.loc[ix], pd.Series(y, index=ix)",
+        "Xtr,Xte,ytr,yte = train_test_split(X,y,test_size=0.2,random_state=42,stratify=y)",
+        "sc = StandardScaler(); Xtr_s,Xte_s = sc.fit_transform(Xtr), sc.transform(Xte)",
+        "models = {'LogReg': LogisticRegression(max_iter=1000), 'RF': RandomForestClassifier(random_state=42), 'SVM': SVC(probability=True,random_state=42)}",
+        "rows=[]",
+        "for n,m in models.items():",
+        "  Xt_tr,Xt_te = (Xtr_s,Xte_s) if n!='RF' else (Xtr,Xte)",
+        "  m.fit(Xt_tr,ytr); yp = m.predict(Xt_te)",
+        "  rows.append({'Model':n,'Accuracy':float(accuracy_score(yte,yp)),'F1':float(f1_score(yte,yp,average='weighted'))})",
+        "result = pd.DataFrame(rows)"
+      ],
+      "clustering_quick": [
+        "X = df[features].select_dtypes(include=[np.number]).dropna()",
+        "km = KMeans(n_clusters=k, n_init=10, random_state=42)",
+        "lab = km.fit_predict(X)",
+        "result = pd.DataFrame({'cluster': lab})",
+        "fig = px.scatter(pd.DataFrame({'x':X.iloc[:,0],'y':X.iloc[:,1],'c':lab}), x='x', y='y', color='c')"
+      ]
+    },
+    "cross_validation": [
+      "Use TimeSeriesSplit for temporal data; K-fold otherwise.",
+      "Report mean ± std across folds with cross_val_score."
+    ],
+    "hyperparameter_tuning": {
+      "gridsearch_examples": {
+        "logreg": [
+          "params = {'C':[0.01,0.1,1,10], 'solver':['lbfgs','saga']}",
+          "gs = GridSearchCV(LogisticRegression(max_iter=1000), params, cv=5, scoring='f1_weighted')",
+          "gs.fit(Xtr_s, ytr); result = {'best_params': gs.best_params, 'best_score': float(gs.best_score_)}"
+        ],
+        "svm": [
+          "params = {'C':[0.1,1,10], 'gamma':['scale','auto'], 'kernel':['rbf','linear']}",
+          "gs = GridSearchCV(SVC(probability=True), params, cv=5, scoring='roc_auc')",
+          "gs.fit(Xtr_s, ytr); result = {'best_params': gs.best_params, 'best_score': float(gs.best_score_)}"
+        ]
+      },
+      "optuna_spaces": {
+        "xgb_reg": [
+          "def objective(trial):",
+          "  p = {",
+          "    'n_estimators': trial.suggest_int('n_estimators', 300, 1200),",
+          "    'max_depth': trial.suggest_int('max_depth', 3, 12),",
+          "    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),",
+          "    'subsample': trial.suggest_float('subsample', 0.6, 1.0),",
+          "    'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),",
+          "    'reg_lambda': trial.suggest_float('reg_lambda', 1e-3, 10.0, log=True)",
+          "  }",
+          "  m = XGBRegressor(random_state=42, **p)",
+          "  m.fit(Xtr, ytr); yp = m.predict(Xte)",
+          "  return float(np.sqrt(mean_squared_error(yte, yp)))"
+        ],
+        "lgb_reg": [
+          "def objective(trial):",
+          "  p = {",
+          "    'n_estimators': trial.suggest_int('n_estimators', 300, 1500),",
+          "    'num_leaves': trial.suggest_int('num_leaves', 15, 255),",
+          "    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),",
+          "    'feature_fraction': trial.suggest_float('feature_fraction', 0.6, 1.0),",
+          "    'bagging_fraction': trial.suggest_float('bagging_fraction', 0.6, 1.0)",
+          "  }",
+          "  m = LGBMRegressor(random_state=42, **p)",
+          "  m.fit(Xtr, ytr); yp = m.predict(Xte)",
+          "  return float(np.sqrt(mean_squared_error(yte, yp)))"
+        ],
+        "lgb_cls": [
+          "def objective(trial):",
+          "  p = {",
+          "    'n_estimators': trial.suggest_int('n_estimators', 300, 1500),",
+          "    'num_leaves': trial.suggest_int('num_leaves', 15, 255),",
+          "    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),",
+          "    'feature_fraction': trial.suggest_float('feature_fraction', 0.6, 1.0),",
+          "    'bagging_fraction': trial.suggest_float('bagging_fraction', 0.6, 1.0)",
+          "  }",
+          "  m = LGBMClassifier(random_state=42, **p)",
+          "  m.fit(Xtr, ytr); yp = m.predict(Xte)",
+          "  return 1.0 - float(f1_score(yte, yp, average='weighted'))"
+        ],
+        "cat_reg": [
+          "def objective(trial):",
+          "  p = {",
+          "    'depth': trial.suggest_int('depth', 4, 10),",
+          "    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),",
+          "    'iterations': trial.suggest_int('iterations', 300, 1500)",
+          "  }",
+          "  m = CatBoostRegressor(random_state=42, **p, verbose=False)",
+          "  m.fit(Xtr, ytr); yp = m.predict(Xte)",
+          "  return float(np.sqrt(mean_squared_error(yte, yp)))"
+        ],
+        "cat_cls": [
+          "def objective(trial):",
+          "  p = {",
+          "    'depth': trial.suggest_int('depth', 4, 10),",
+          "    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),",
+          "    'iterations': trial.suggest_int('iterations', 300, 1500)",
+          "  }",
+          "  m = CatBoostClassifier(random_state=42, **p, verbose=False)",
+          "  m.fit(Xtr, ytr); yp = m.predict(Xte)",
+          "  return 1.0 - float(f1_score(yte, yp, average='weighted'))"
+        ]
+      }
+    },
+    "explainability": [
+      "For tree/boosting: shap.Explainer(model, X_sample) → mean(|SHAP|) for global importance.",
+      "For linear/logistic: standardized coefficients + SHAP.",
+      "For black-box: LimeTabularExplainer(X_train.values, feature_names=X_train.columns, class_names=class_names, discretize_continuous=True)."
+    ]
+  },
+  "timeseries": {
+    "prep": [
+      "Ensure regular frequency; sort/deduplicate; convert to datetime.",
+      "Fill small gaps via forward-fill or interpolate; document strategy.",
+      "Consider log/Box-Cox for positive series."
+    ],
+    "models": {
+      "exponential_smoothing": [
+        "mdl = ExponentialSmoothing(ts[value_col], trend='add', seasonal=None).fit()",
+        "fc = mdl.forecast(h); result = pd.DataFrame({'forecast': fc}).reset_index()"
+      ],
+      "arima": [
+        "mdl = ARIMA(ts[value_col], order=(p,d,q)).fit()",
+        "fc = mdl.get_forecast(steps=h); conf = fc.conf_int()",
+        "result = fc.predicted_mean.rename('forecast').reset_index()"
+      ],
+      "sarimax": [
+        "mdl = SARIMAX(ts[value_col], order=(p,d,q), seasonal_order=(P,D,Q,s)).fit(disp=False)",
+        "fc = mdl.get_forecast(steps=h); result = fc.predicted_mean.rename('forecast').reset_index()"
+      ],
+      "prophet_min": [
+        "data = df[[date_col, value_col]].rename(columns={date_col:'ds', value_col:'y'})",
+        "m = Prophet()",
+        "m.fit(data); future = m.make_future_dataframe(periods=h, freq='D')",
+        "fc = m.predict(future); result = fc[['ds','yhat','yhat_lower','yhat_upper']].tail(h)"
+      ]
+    },
+    "diagnostics": [
+      "ACF/PACF; residuals: acorr_ljungbox, normality, zero mean, constant variance."
+    ],
+    "metrics": [
+      "MAPE",
+      "SMAPE",
+      "RMSE",
+      "MAE"
+    ],
+    "time_series_split_examples": {
+      "sarimax_walk_forward": [
+        "ts = df[[date_col, value_col]].dropna().copy(); ts[date_col] = pd.to_datetime(ts[date_col]); ts = ts.sort_values(date_col)",
+        "tss = TimeSeriesSplit(n_splits=k)",
+        "rows=[]",
+        "for tr, te in tss.split(ts):",
+        "  y_tr = ts.iloc[tr][value_col]",
+        "  mdl = SARIMAX(y_tr, order=(p,d,q), seasonal_order=(P,D,Q,s)).fit(disp=False)",
+        "  h = len(te)",
+        "  fc = mdl.forecast(steps=h)",
+        "  y_te = ts.iloc[te][value_col].values",
+        "  rows.append({'RMSE': float(np.sqrt(mean_squared_error(y_te, fc)))})",
+        "result = pd.DataFrame(rows)"
+      ],
+      "prophet_rolling_origin": [
+        "ts = df[[date_col, value_col]].rename(columns={date_col:'ds', value_col:'y'}).dropna().copy()",
+        "ts['ds'] = pd.to_datetime(ts['ds']); ts = ts.sort_values('ds')",
+        "splits = TimeSeriesSplit(n_splits=k)",
+        "rows=[]",
+        "for tr, te in splits.split(ts):",
+        "  train = ts.iloc[tr]; test = ts.iloc[te]",
+        "  m = Prophet()",
+        "  m.fit(train)",
+        "  fc = m.predict(test[['ds']])['yhat'].values",
+        "  rows.append({'RMSE': float(np.sqrt(mean_squared_error(test['y'].values, fc)))})",
+        "result = pd.DataFrame(rows)"
+      ]
+    },
+    "signal_processing": [
+      "Denoise: savgol_filter(series, window_length=w, polyorder=2)",
+      "Low-pass: b,a = butter(N, Wn, btype='low'); filt = filtfilt(b,a,series)",
+      "Spectral density: f,Pxx = welch(series)"
+    ],
+    "demand_forecasting_micro": [
+      "g = df[[date_col, key_col, value_col]].dropna().copy(); g[date_col] = pd.to_datetime(g[date_col])",
+      "daily = g.groupby([key_col, pd.Grouper(key=date_col, freq='D')])[value_col].sum().reset_index()",
+      "result = daily.sort_values([key_col, date_col]).head()"
+    ]
+  },
+  "data_quality": {
+    "checks": [
+      "Row/column counts; duplicate rows/keys; missingness rates; type audit (expected vs actual); value ranges; outlier % per numeric; cardinality per categorical.",
+      "Leakage scan: columns highly correlated with target (>0.99) or post-event features."
+    ],
+    "snippets": [
+      "dup_keys = df.duplicated(subset=keys).mean(); miss = df.isna().mean().sort_values(ascending=False)",
+      "result = {'shape': df.shape, 'dup_key_rate': float(dup_keys), 'missing_top10': miss.head(10).to_dict()}"
+    ]
+  },
+  "reporting": {
+    "quick_text_blocks": [
+      "Summarize model choice, validation scheme, primary metric, and next steps in 2–3 lines.",
+      "When failing, produce a friendly actionable error with exact missing columns."
+    ]
+  },
+  "micro_templates": {
+    "ab_testing_rates": [
+      "stat, p = proportions_ztest([conv_a, conv_b], [n_a, n_b])",
+      "lift = conv_b/n_b - conv_a/n_a",
+      "result = {'z': float(stat), 'p': float(p), 'lift': float(lift)}"
+    ],
+    "uplift_modeling_t_learner": [
+      "X = df[features]; y = df[outcome]; t = df[treatment]",
+      "m_t = XGBRegressor().fit(X[t==1], y[t==1]); m_c = XGBRegressor().fit(X[t==0], y[t==0])",
+      "tau = m_t.predict(X) - m_c.predict(X); result = pd.Series(tau, name='uplift').to_frame()"
+    ],
+    "churn_segmentation": [
+      "X = df[features].dropna(); y = LabelEncoder().fit_transform(df[target].dropna())",
+      "Xtr,Xte,ytr,yte = train_test_split(X,y,test_size=0.2,random_state=42,stratify=y)",
+      "m = RandomForestClassifier(random_state=42).fit(Xtr,ytr); result = {'F1': float(f1_score(yte, m.predict(Xte), average='weighted'))}"
+    ],
+    "demand_forecasting_ets": [
+      "ts = df[[date_col, value_col]].dropna(); ts[date_col]=pd.to_datetime(ts[date_col]); ts=ts.sort_values(date_col)",
+      "mdl = ExponentialSmoothing(ts[value_col], trend='add').fit(); fc = mdl.forecast(h)",
+      "result = pd.DataFrame({'forecast': fc}).reset_index()"
+    ],
+    "ab_testing_means_welch": [
+      "# Inputs: group col `g`, values `val`, groups g1/g2",
+      "x = df[df[g]==g1][val].dropna(); y = df[df[g]==g2][val].dropna()",
+      "stat, p = ttest_ind(x, y, equal_var=False)",
+      "result = {'t_welch': float(stat), 'p': float(p), 'n1': int(len(x)), 'n2': int(len(y))}"
+    ],
+    "sample_size_ttest_power": [
+      "# Inputs: effect (Cohen d), alpha, power",
+      "tp = TTestPower()",
+      "n = tp.solve_power(effect_size=effect, alpha=alpha, power=power, alternative='two-sided')",
+      "result = {'per_group_n': float(n)}"
+    ],
+    "multiple_testing_bh_fdr": [
+      "# Inputs: pvals (list/array)",
+      "p = np.asarray(pvals, dtype=float)",
+      "order = np.argsort(p); n = p.size",
+      "bh = np.minimum.accumulate((np.sort(p) * n / (np.arange(1, n+1)))[::-1])[::-1]",
+      "adj = np.empty_like(p); adj[order] = bh",
+      "result = pd.DataFrame({'p': p, 'p_adj_bh': adj})"
+    ],
+    "corr_heatmap_quick": [
+      "c = df.corr(numeric_only=True)",
+      "fig = px.imshow(c, text_auto=True, aspect='auto')",
+      "result = c.round(3)"
+    ],
+    "vif_table": [
+      "# Inputs: features list `features`",
+      "X = df[features].select_dtypes(include=[np.number]).dropna()",
+      "vif = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]",
+      "result = pd.DataFrame({'feature': X.columns, 'VIF': vif}).sort_values('VIF', ascending=False)"
+    ],
+    "threshold_opt_f1": [
+      "# Inputs: yte, proba (positive-class probabilities)",
+      "ths = np.linspace(0.05, 0.95, 19)",
+      "rows = [{'threshold': float(t), 'F1': float(f1_score(yte, (proba>=t).astype(int)))} for t in ths]",
+      "result = pd.DataFrame(rows).sort_values('F1', ascending=False).head(5)"
+    ],
+    "roc_curve_plot": [
+      "# Inputs: yte, proba",
+      "fpr, tpr, _ = roc_curve(yte, proba)",
+      "auc = roc_auc_score(yte, proba)",
+      "fig = go.Figure(); fig.add_scatter(x=fpr, y=tpr, mode='lines', name=f'ROC AUC={auc:.3f}')",
+      "fig.update_layout(title='ROC Curve', xaxis_title='FPR', yaxis_title='TPR'); result = {'auc': float(auc)}"
+    ],
+    "confusion_matrix_report": [
+      "# Inputs: yte, ypred",
+      "cm = confusion_matrix(yte, ypred)",
+      "rep = classification_report(yte, ypred, output_dict=True)",
+      "result = {'confusion_matrix': cm.tolist(), 'report': rep}"
+    ],
+    "feature_importance_tree": [
+      "# Inputs: Xtr, ytr, Xte",
+      "m = RandomForestClassifier(random_state=42).fit(Xtr, ytr)",
+      "imp = pd.Series(m.feature_importances_, index=Xtr.columns).sort_values(ascending=False).head(15)",
+      "result = imp.reset_index().rename(columns={'index':'feature', 0:'importance'})"
+    ],
+    "missing_values_impute_basic": [
+      "# Simple numeric mean / categorical mode imputation",
+      "num = df.select_dtypes(include=[np.number]).columns; cat = df.select_dtypes(exclude=[np.number]).columns",
+      "df2 = df.copy(); df2[num] = df2[num].fillna(df2[num].mean()); df2[cat] = df2[cat].apply(lambda s: s.fillna(s.mode().iloc[0]) if s.isna().any() else s)",
+      "result = {'missing_before': df.isna().mean().to_dict(), 'missing_after': df2.isna().mean().to_dict()}"
+    ],
+    "outliers_iqr_flag": [
+      "# Inputs: column name `col`",
+      "q1, q3 = df[col].quantile(0.25), df[col].quantile(0.75)",
+      "iqr = q3 - q1; low, high = q1 - 1.5*iqr, q3 + 1.5*iqr",
+      "result = df.assign(is_outlier=((df[col]<low)|(df[col]>high)).astype(int))"
+    ],
+    "zscore_anomaly_flag": [
+      "# Inputs: column name `col`, threshold z (e.g., 3.0)",
+      "z = np.abs(zscore(df[col].astype(float)))",
+      "result = df.assign(is_outlier=(z>threshold).astype(int))"
+    ],
+    "date_features_quick": [
+      "# Inputs: datetime column `d`",
+      "d2 = pd.to_datetime(df[d])",
+      "result = df.assign(year=d2.dt.year, month=d2.dt.month, day=d2.dt.day, dow=d2.dt.dayofweek)"
+    ],
+    "yoy_growth": [
+      "# Inputs: key_col, date_col, val_col, period=12 for monthly YoY",
+      "g = df.sort_values([key_col, date_col]).copy()",
+      "g[date_col] = pd.to_datetime(g[date_col])",
+      "result = g.assign(yoy=g.groupby(key_col)[val_col].pct_change(periods=period))[[key_col, date_col, val_col, 'yoy']].dropna()"
+    ],
+    "target_mean_encoding": [
+      "# Inputs: cat, target",
+      "means = df.groupby(cat)[target].mean()",
+      "result = df[[cat]].join(means.rename('mean_enc'), on=cat)"
+    ],
+    "k_selection_silhouette": [
+      "# Inputs: features list `features`, ks (e.g., range(2,9))",
+      "X = df[features].select_dtypes(include=[np.number]).dropna()",
+      "rows = []",
+      "for k in ks: lab = KMeans(n_clusters=k, n_init=10, random_state=42).fit_predict(X); rows.append({'k': int(k), 'silhouette': float(silhouette_score(X, lab))})",
+      "result = pd.DataFrame(rows).sort_values('silhouette', ascending=False)"
+    ],
+    "pca_explained_variance": [
+      "# Inputs: features list `features`",
+      "X = df[features].select_dtypes(include=[np.number]).dropna()",
+      "p = PCA(n_components=min(10, X.shape[1])).fit(X)",
+      "evr = pd.DataFrame({'PC': np.arange(1, p.n_components_+1), 'ExplainedVar': p.explained_variance_ratio_})",
+      "fig = px.line(evr, x='PC', y='ExplainedVar', markers=True); result = evr"
+    ],
+    "gridsearch_xgb_cls": [
+      "# Inputs: Xtr, ytr",
+      "params = {'n_estimators':[300,600,900], 'max_depth':[3,6,9], 'learning_rate':[0.05,0.1,0.2]}",
+      "gs = GridSearchCV(XGBClassifier(random_state=42, eval_metric='logloss'), params, cv=5, scoring='f1_weighted')",
+      "gs.fit(Xtr, ytr); result = {'best_params': gs.best_params, 'best_score': float(gs.best_score_)}"
+    ],
+    "optuna_template_generic": [
+      "# Inputs: objective(trial) defined above",
+      "study = optuna.create_study(direction='minimize')",
+      "study.optimize(objective, n_trials=50)",
+      "result = {'best_params': study.best_params, 'best_value': float(study.best_value)}"
+    ],
+    "seasonal_decompose_quick": [
+      "# Inputs: date_col, value_col, period",
+      "ts = df[[date_col, value_col]].dropna().copy(); ts[date_col] = pd.to_datetime(ts[date_col]); ts = ts.set_index(date_col)[value_col]",
+      "dc = seasonal_decompose(ts, period=period, model='additive', extrapolate_trend='freq')",
+      "result = pd.DataFrame({'trend': dc.trend, 'seasonal': dc.seasonal, 'resid': dc.resid}).dropna().reset_index().rename(columns={'index': date_col})"
+    ],
+    "stationarity_tests": [
+      "# Inputs: series `s`",
+      "s2 = pd.Series(s).dropna().astype(float)",
+      "result = {'adf_p': float(adfuller(s2)[1]), 'kpss_p': float(kpss(s2, regression='c')[1])}"
+    ],
+    "ts_last_split_backtest": [
+      "# Inputs: date_col, value_col, order=(p,d,q)",
+      "ts = df[[date_col, value_col]].dropna().copy(); ts[date_col] = pd.to_datetime(ts[date_col]); ts = ts.sort_values(date_col)",
+      "cut = int(len(ts)*0.8); y_tr, y_te = ts[value_col].iloc[:cut], ts[value_col].iloc[cut:]",
+      "mdl = ARIMA(y_tr, order=order).fit(); fc = mdl.forecast(steps=len(y_te))",
+      "result = {'RMSE': float(np.sqrt(mean_squared_error(y_te.values, fc)))}"
+    ],
+    "join_audit_share": [
+      "# Inputs: left, right, on, how",
+      "m = pd.merge(left, right, on=on, how=how, indicator=True)",
+      "result = m['_merge'].value_counts(normalize=True).rename('share').to_frame()"
+    ],
+    "schema_summary": [
+      "result = {'shape': df.shape, 'columns': {c: str(df[c].dtype) for c in df.columns}}"
+    ],
+    "dual_output_minimal": [
+      "assert (('df' in globals() and isinstance(df, pd.DataFrame) and len(df) > 0) or ('df' in globals() and isinstance(df, pd.DataFrame) and len(df) > 0)), 'Provide a valid DataFrame'",
+      "# (1) Compute the exact table/series behind the chart",
+      "table = ...  # e.g., groupby/pivot/filter with exact column names",
+      "# (2) Build a compact, labeled Plotly figure when meaningful",
+      "try:",
+      "  fig = px.bar(table, x=..., y=...)  # or px.line/px.scatter/px.imshow etc.",
+      "  fig.update_layout(title='...', xaxis_title='...', yaxis_title='...')",
+      "except Exception:",
+      "  fig = None  # no meaningful chart possible; explain briefly above",
+      "# (3) Return both artifacts",
+      "result = table"
+    ],
+    "wordcloud_minimal": [
+      "assert (('df' in globals() and isinstance(df, pd.DataFrame) and len(df) > 0) or ('df' in globals() and isinstance(df, pd.DataFrame) and len(df) > 0)), 'Provide a valid DataFrame'",
+      "assert 'text_column' in df.columns, 'Expected a column with text to build wordcloud'",
+      "from wordcloud import WordCloud",
+      "import matplotlib.pyplot as plt",
+      "text = ' '.join(df['text_column'].astype(str))",
+      "wc = WordCloud(width=800, height=400, background_color='white').generate(text)",
+      "fig, ax = plt.subplots(figsize=(10, 5))",
+      "ax.imshow(wc, interpolation='bilinear')",
+      "ax.axis('off')",
+      "result = df['text_column'].head(10).tolist()  # example: return top few texts as result"
+    ],
+    "wordcloud_plotly_minimal": [
+      "from collections import Counter",
+      "import numpy as np",
+      "text = ' '.join(df['text_column'].astype(str)).split()",
+      "freq = Counter(text)",
+      "top_words = freq.most_common(100)",
+      "words, counts = zip(*top_words)",
+      "x = np.random.rand(len(words))",
+      "y = np.random.rand(len(words))",
+      "sizes = [10 + (c / max(counts)) * 40 for c in counts]",
+      "fig = go.Figure()",
+      "fig.add_trace(go.Scatter(x=x, y=y, text=words, mode='text', textfont={'size': sizes}, hovertext=[f'{w}: {c}' for w,c in top_words], hoverinfo='text'))",
+      "fig.update_layout(xaxis={'showgrid':False,'showticklabels':False,'zeroline':False}, yaxis={'showgrid':False,'showticklabels':False,'zeroline':False}, title='Word Cloud')",
+      "result = top_words"
+    ]
+  },
+  "selector_header": {
+    "purpose": "Optional tiny runtime header to include only needed sections from this file.",
+    "instructions": [
+      "Start with core sections (meta, runtime_environment, style_guide, guardrails, patterns).",
+      "If user request mentions visualization keywords, also include 'visualization'.",
+      "If it mentions statistical testing, include 'statistics'.",
+      "If it mentions modeling/ML/feature/anomaly, include 'ml'.",
+      "If it mentions time series/forecasting, include 'timeseries'.",
+      "Attach relevant 'micro_templates' by keyword when appropriate.",
+      "Keep final injection within model context budget.",
+      "Attempt a visualization by default when data permits, even if the user did not explicitly ask for charts."
+    ],
+    "keyword_mapping": {
+      "visualization": [
+        "plot",
+        "plots",
+        "chart",
+        "charts",
+        "visual",
+        "visualize",
+        "visualization",
+        "graph",
+        "figure",
+        "line",
+        "bar",
+        "hist",
+        "histogram",
+        "box",
+        "violin",
+        "scatter",
+        "bubble",
+        "heatmap",
+        "correlation matrix",
+        "corr matrix",
+        "pairplot",
+        "area",
+        "pie",
+        "donut",
+        "treemap",
+        "waterfall",
+        "sankey",
+        "gauge",
+        "indicator",
+        "dashboard",
+        "facet",
+        "small multiples",
+        "trendline",
+        "time plot",
+        "timeseries plot"
+      ],
+      "statistics": [
+        "statistical",
+        "hypothesis test",
+        "hypothesis testing",
+        "ab test",
+        "a/b test",
+        "significance",
+        "p-value",
+        "p value",
+        "confidence",
+        "ci",
+        "interval",
+        "t-test",
+        "ttest",
+        "anova",
+        "chi-square",
+        "chisquare",
+        "fisher",
+        "mann-whitney",
+        "wilcoxon",
+        "kruskal",
+        "friedman",
+        "normality",
+        "shapiro",
+        "anderson",
+        "levene",
+        "bartlett",
+        "correlation",
+        "pearson",
+        "spearman",
+        "kendall",
+        "effect size",
+        "power",
+        "sample size",
+        "multiple testing",
+        "fdr",
+        "bh correction",
+        "kpss",
+        "adf",
+        "ljung-box"
+      ],
+      "ml": [
+        "ml",
+        "machine learning",
+        "model",
+        "train",
+        "fit",
+        "predict",
+        "inference",
+        "feature",
+        "feature selection",
+        "feature importance",
+        "cross-validation",
+        "cv",
+        "grid search",
+        "hyperparameter",
+        "tuning",
+        "optuna",
+        "xgboost",
+        "lightgbm",
+        "catboost",
+        "random forest",
+        "gradient boosting",
+        "gbdt",
+        "decision tree",
+        "svm",
+        "knn",
+        "roc",
+        "auc",
+        "pr curve",
+        "precision",
+        "recall",
+        "f1",
+        "accuracy",
+        "pipeline",
+        "baseline",
+        "classification metrics",
+        "regression metrics"
+      ],
+      "timeseries": [
+        "time series",
+        "timeseries",
+        "forecast",
+        "forecasting",
+        "seasonal",
+        "seasonality",
+        "trend",
+        "arima",
+        "sarima",
+        "sarimax",
+        "ets",
+        "exponential smoothing",
+        "prophet",
+        "rolling",
+        "sliding window",
+        "backtest",
+        "walk-forward",
+        "walk forward",
+        "holdout",
+        "lag feature",
+        "lags",
+        "window features",
+        "autocorrelation",
+        "acf",
+        "pacf",
+        "stationarity",
+        "stl",
+        "decompose",
+        "decomposition",
+        "kpss",
+        "adf",
+        "ljung-box"
+      ],
+      "anomalies": [
+        "anomaly",
+        "anomalies",
+        "outlier",
+        "outliers",
+        "novelty detection",
+        "isolation forest",
+        "iforest",
+        "lof",
+        "ocsvm",
+        "one-class svm",
+        "knn anomaly",
+        "z-score",
+        "zscore",
+        "iqr",
+        "changepoint",
+        "change point"
+      ],
+      "eda": [
+        "eda",
+        "explore",
+        "exploratory",
+        "summary",
+        "profile",
+        "profiling",
+        "describe",
+        "missing",
+        "null",
+        "nan",
+        "na",
+        "duplicates",
+        "duplicate",
+        "schema",
+        "data quality",
+        "sanity check",
+        "distribution",
+        "skewness",
+        "kurtosis"
+      ],
+      "joins_merges": [
+        "join",
+        "joins",
+        "merge",
+        "merges",
+        "left join",
+        "right join",
+        "inner join",
+        "outer join",
+        "concat",
+        "union",
+        "combine",
+        "lookup",
+        "key match"
+      ],
+      "feature_engineering": [
+        "feature engineering",
+        "encoding",
+        "encode",
+        "one-hot",
+        "one hot",
+        "label encode",
+        "scale",
+        "scaling",
+        "standardize",
+        "normalize",
+        "binning",
+        "bucketing",
+        "polynomial features",
+        "pca",
+        "svd",
+        "dimensionality",
+        "dimensionality reduction",
+        "selectkbest",
+        "rfe"
+      ],
+      "hyperparameter_tuning": [
+        "hyperparameter",
+        "tuning",
+        "grid search",
+        "random search",
+        "optuna",
+        "bayesian optimization",
+        "search space",
+        "trials",
+        "study",
+        "cv tuning",
+        "parameter sweep"
+      ],
+      "explainability": [
+        "explain",
+        "explainability",
+        "interpret",
+        "interpretability",
+        "shap",
+        "lime",
+        "feature importance",
+        "partial dependence",
+        "local explanation",
+        "global explanation"
+      ],
+      "clustering": [
+        "cluster",
+        "clustering",
+        "segment",
+        "segmentation",
+        "kmeans",
+        "k-means",
+        "dbscan",
+        "agglomerative",
+        "hierarchical",
+        "silhouette",
+        "davies-bouldin",
+        "inertia"
+      ],
+      "regression": [
+        "regress",
+        "regression",
+        "numeric target",
+        "continuous target",
+        "predict value",
+        "estimation"
+      ],
+      "classification": [
+        "classify",
+        "classification",
+        "churn",
+        "fraud",
+        "spam",
+        "label",
+        "probability",
+        "proba",
+        "threshold",
+        "confusion matrix"
+      ],
+      "data_quality": [
+        "quality",
+        "leakage",
+        "target leakage",
+        "validate schema",
+        "schema check",
+        "type audit",
+        "range check",
+        "cardinality",
+        "outlier rate",
+        "missingness rate"
+      ]
+    }
+  }
+}

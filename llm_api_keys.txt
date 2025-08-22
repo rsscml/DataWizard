@@ -1,0 +1,8 @@
+Claude API Key:
+
+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
+
+
+OpenAI API Key:
+
+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

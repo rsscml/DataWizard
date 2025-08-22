@@ -145,5 +145,5 @@ optuna~=4.4.0
 pycaret~=3.3.2
 category_encoders~=2.7.0
 feature-engine~=1.6.2
-
+wordcloud~=1.9.4
 

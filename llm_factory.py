@@ -60,7 +60,7 @@ class LLMConfig:
         
         config = cls(
             provider=provider_enum,
-            temperature=float(os.getenv('LLM_TEMPERATURE', '0.1')),
+            temperature=float(os.getenv('LLM_TEMPERATURE', '1')),
             max_retries=int(os.getenv('LLM_MAX_RETRIES', '3')),
             timeout=int(os.getenv('LLM_TIMEOUT', '300')),
             streaming=os.getenv('LLM_STREAMING', 'false').lower() == 'true'
@@ -181,13 +181,29 @@ class AzureOpenAIWrapper(BaseLLMWrapper):
 
 class OpenAIWrapper(BaseLLMWrapper):
     """Wrapper for standard OpenAI API"""
+    def __init__(self, config: LLMConfig):
+        """Initialize the Claude wrapper with proper error handling"""
+        self.config = config
+        self.llm = None
+
+        # IMPORTANT: Call initialize() explicitly and handle any errors
+        try:
+            logger.info("OpenAIWrapper.__init__: Starting initialization...")
+            self.initialize()
+            logger.info(f"OpenAIWrapper.__init__: Completed. LLM: {self.llm is not None}")
+            logger.info(f"OpenAIWrapper.__init__: Caching Status: {self.config.enable_caching}")
+        except Exception as init_error:
+            logger.error(f"OpenAIWrapper.__init__: Initialization failed: {init_error}")
+            # Don't suppress the error - let it bubble up
+            raise RuntimeError(f"OpenAIWrapper initialization failed: {init_error}") from init_error
     
     def initialize(self):
         """Initialize OpenAI"""
         try:
             kwargs = {
                 "model": self.config.model_name or "gpt-4-turbo-preview",
-                "temperature": self.config.temperature,
+                "base_url": "https://api.openai.com/v1",
+                #"temperature": self.config.temperature,
                 "max_retries": self.config.max_retries,
                 "request_timeout": self.config.timeout,
                 "streaming": self.config.streaming,
@@ -199,6 +215,17 @@ class OpenAIWrapper(BaseLLMWrapper):
             
             self.llm = ChatOpenAI(**kwargs)
             logger.info(f"OpenAI LLM initialized with model {self.config.model_name}")
+
+            try:
+                logger.info("Testing OpenAI wrapper with simple message...")
+                from langchain.schema import HumanMessage
+                test_response = self.llm.invoke([HumanMessage(content="Say 'Wrapper OK'")])
+                logger.info(f" Wrapper test successful: {test_response.content}")
+            except Exception as test_error:
+                logger.warning(f" Wrapper test failed but LLM was created: {test_error}")
+                # Don't fail initialization just because test failed
+
+            logger.info("OpenAI wrapper initialization completed successfully")
             
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI: {e}")

@@ -17,6 +17,7 @@ import re
 import json
 import pandas as pd
 import numpy as np
+from wordcloud import WordCloud
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.utils import PlotlyJSONEncoder
@@ -169,7 +170,16 @@ try:
 except ImportError:
     ANOMALY_DETECTION_AVAILABLE = False
 
-from prompts import get_code_generation_prompt
+# Sentiment (VADER)
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+# Market basket (Apriori + association rules)
+from mlxtend.frequent_patterns import apriori, association_rules
+# Keyword extraction
+import yake
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+#from prompts import get_code_generation_prompt
+from codegen_prompt import get_code_generation_prompt
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -1283,7 +1293,7 @@ client_id = os.getenv('AZURE_CLIENT_ID')
 client_secret_value = os.getenv('AZURE_CLIENT_SECRET')
 subs_key = os.getenv('SUBSCRIPTION_KEY')
 oauth_token_url = os.getenv('TOKEN_URL')
-openai_base_url = os.getenv('OPENAI_BASE_URL')
+openai_base_url = os.getenv('AZURE_OPENAI_BASE_URL')
 model_version = os.getenv('MODEL_VERSION')
 
 def initialize_token_manager():
@@ -1946,7 +1956,10 @@ class DataAnalysisAgent:
 
             try:
                 # Temporarily set temperature for commentary generation
-                self.llm.temperature = self.config.commentary_temperature
+                if LLMConfig.from_env().provider.value == 'openai':
+                    self.llm.temperature = 1
+                else:
+                    self.llm.temperature = self.config.commentary_temperature
 
                 # Use the existing LLM with retry logic instead of creating new instance
                 response = self._invoke_llm_with_retry([SystemMessage(content=commentary_prompt)])
@@ -1998,12 +2011,12 @@ class DataAnalysisAgent:
         has_business_periods = data_format_info.get('has_business_periods', False)
         
         # Create context about the data format
-        data_context = ""
+        data_context = state['data_context']
         if is_wide_format:
             if has_business_periods:
-                data_context = "This analysis uses wide format data with business periods (YTD, MAT, rolling periods, etc.)."
+                data_context += "This analysis uses wide format data with business periods (YTD, MAT, rolling periods, etc.)."
             else:
-                data_context = "This analysis uses wide format time-series data with traditional time periods."
+                data_context += "This analysis uses wide format time-series data with traditional time periods."
         
         # Determine result summary for context
         result_summary = ""
@@ -2028,30 +2041,30 @@ Generate brief commentary and insights for a data analysis result.
 USER QUERY: {user_query}
 
 ANALYSIS CONTEXT:
+- Data Context: {data_context}
+- Code Generated: {state['generated_code']}
 - Result Type: {result_type}
 - Has Visualization: {has_plot}
 - Result Summary: {result_summary}
-- Data Context: {data_context}
+- Result: {execution_result}
 
 TASK:
-Provide a brief commentary explaining what the user is seeing, followed by 3-4 key insights.
+Provide a brief commentary explaining what the user is seeing, followed by one or more key insights on the basis of user's question, the data context & the result obtained by executing the generated code.
 
 GUIDELINES:
-1. Keep commentary to 1-2 sentences maximum (under {self.config.max_commentary_length} characters)
-2. Focus on what the user is seeing, not how it was calculated
-3. Use plain language, avoid technical jargon
-4. Be specific about the data when possible
-5. For charts, explain what the visualization shows
-6. For tables, summarize key patterns or findings
-7. For single values, provide context about what the number means
+1. Keep commentary brief (under {self.config.max_commentary_length} characters)
+2. Be specific about the data when possible
+3. For charts, explain what the visualization shows
+4. For tables & lists, summarize key patterns or findings
+5. For single values, provide context about what the number means
 
 RESPONSE FORMAT:
-COMMENTARY: [Brief 1-2 sentence explanation of what the user is seeing]
+COMMENTARY: [Brief explanation of what the user is seeing]
 
 INSIGHTS:
 - [Insight 1: Key finding or pattern]
 - [Insight 2: Notable observation or implication]
-- [Insight 3: Actionable takeaways or business implication. Break this down into multiple lines if needed.] (optional)
+- [Insight 3: Actionable takeaways or business implication. Break this down into multiple lines if needed.]
 - [Insight 4: Any other insight]
 
 Focus on actionable observations, hidden connections & interesting facts & factoids pertinent to the data & output. Do not make generic statements. 
@@ -2592,6 +2605,7 @@ WORKSHEET MERGING:
                 "code_length": len(code)
             })
 
+            print("generated code: ", state['generated_code'])
             return state
             
         except Exception as e:
@@ -2754,6 +2768,7 @@ WORKSHEET MERGING:
                 'np': np,
                 'px': px,
                 'go': go,
+                'WordCloud': WordCloud,
                 'result': None,
                 'fig': None,
                 # Add wide format utilities
@@ -2927,6 +2942,15 @@ WORKSHEET MERGING:
                 exec_globals.update({
                     'optuna': optuna
                 })
+
+            # ad hoc
+            exec_globals.update({
+                'SentimentIntensityAnalyzer': SentimentIntensityAnalyzer,
+                'apriori': apriori,
+                'association_rules': association_rules,
+                'yake': yake,
+                'TfidfVectorizer': TfidfVectorizer
+            })
 
             # Add import capability for dynamic imports
             exec_globals['__builtins__'] = __builtins__
