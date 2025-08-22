@@ -1,0 +1,64 @@
+{
+  "e109d2ef-743d-4a3d-b517-2ee5978f9a5b": [
+    {
+      "file_path": "uploads/SafetyIncidents_redacted.csv",
+      "file_type": "upload",
+      "created_at": 1755756036.9456117,
+      "last_accessed": 1755756036.945612
+    },
+    {
+      "file_path": "documents/14832f44-b7b8-43e9-af6e-4e8a7ab98e81.xlsx",
+      "file_type": "document",
+      "created_at": 1755756044.884716,
+      "last_accessed": 1755756044.8847165
+    },
+    {
+      "file_path": "uploads/SafetyIncidents_redacted.csv",
+      "file_type": "upload",
+      "created_at": 1755759639.4658365,
+      "last_accessed": 1755759639.465837
+    },
+    {
+      "file_path": "documents/c855f734-81f6-4bfe-bace-5500b3d1a021.xlsx",
+      "file_type": "document",
+      "created_at": 1755759647.5623295,
+      "last_accessed": 1755759647.5623298
+    },
+    {
+      "file_path": "uploads/SafetyIncidents_redacted.csv",
+      "file_type": "upload",
+      "created_at": 1755778444.9784608,
+      "last_accessed": 1755778444.9784613
+    },
+    {
+      "file_path": "documents/b97617f6-4f10-477f-9be5-35f57a516ea5.xlsx",
+      "file_type": "document",
+      "created_at": 1755778452.9283926,
+      "last_accessed": 1755778452.928393
+    },
+    {
+      "file_path": "uploads/SafetyIncidents_redacted.csv",
+      "file_type": "upload",
+      "created_at": 1755779254.4955554,
+      "last_accessed": 1755779254.4955556
+    },
+    {
+      "file_path": "documents/c0ac839d-92f6-407c-ba26-dfc1806013b1.xlsx",
+      "file_type": "document",
+      "created_at": 1755779262.4638422,
+      "last_accessed": 1755779262.4638424
+    },
+    {
+      "file_path": "uploads/SafetyIncidents_redacted.csv",
+      "file_type": "upload",
+      "created_at": 1755837549.7628713,
+      "last_accessed": 1755837549.7628717
+    },
+    {
+      "file_path": "documents/71ead685-f830-488a-9423-c73006707c7b.xlsx",
+      "file_type": "document",
+      "created_at": 1755837557.6685607,
+      "last_accessed": 1755837557.6685612
+    }
+  ]
+}
