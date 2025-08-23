@@ -396,18 +396,8 @@ class EnhancedTemplateManager:
             worksheet_data = data_source
         
         context_parts = [
-            "=" * 80,
-            f"TEMPLATE-ENHANCED ANALYSIS: {template.name}",
-            "=" * 80,
             "",
-            f"Template Information:",
-            f"   - Name: {template.name}",
-            f"   - Domain: {template.domain}",
-            f"   - Version: {template.version}",
-            f"   - Type: {template.template_type}",
-            f"   - Description: {template.description}",
-            "",
-            f"Business Context:",
+            f"DATASET DOMAIN SPECIFIC INFORMATION:",
             template.business_context,
             "",
         ]
@@ -516,9 +506,7 @@ class EnhancedTemplateManager:
         
         # Add the original context
         context_parts.extend([
-            "=" * 80,
-            " STANDARD DATA ANALYSIS CONTEXT:",
-            "=" * 80,
+            " STANDARD DATA PROFILE:",
             base_context
         ])
         

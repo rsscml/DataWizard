@@ -1739,24 +1739,20 @@ class DataAnalysisAgent:
         measure_cols = data_format_info.get('measure_columns', [])
 
         context_parts = []
-        context_parts.append("\n" + "=" * 70)
 
         # Dynamic header based on what's detected
         if has_traditional_time and has_business_periods:
-            context_parts.append("MIXED PERIOD WIDE FORMAT DATA INTELLIGENCE")
-            context_parts.append("(Traditional Time Periods + Business Periods)")
+            context_parts.append("MIXED PERIOD WIDE FORMAT DATA INTELLIGENCE (Traditional Time Periods + Business Periods)")
         elif has_business_periods:
             context_parts.append("BUSINESS PERIODS WIDE FORMAT DATA INTELLIGENCE")
         else:
             context_parts.append("WIDE FORMAT TIME-SERIES DATA INTELLIGENCE")
 
-        context_parts.append("=" * 70)
-
         # Section 1: Traditional Time Columns (if present)
         if has_traditional_time and time_cols:
             context_parts.append(f"\nTRADITIONAL TIME COLUMNS ({len(time_cols)}):")
-            display_time_cols = time_cols[:15]
-            time_cols_suffix = f" ... and {len(time_cols) - 15} more" if len(time_cols) > 15 else ""
+            display_time_cols = time_cols[:100]
+            time_cols_suffix = f" ... and {len(time_cols) - 100} more" if len(time_cols) > 100 else ""
             context_parts.append(f"  Examples: {', '.join(display_time_cols)}{time_cols_suffix}")
             context_parts.append(f"  • Calendar-based periods (quarters, months, years)")
             context_parts.append(f"  • Sequential time progression")
@@ -1780,10 +1776,10 @@ class DataAnalysisAgent:
             for category, periods in periods_by_category.items():
                 category_display = category.replace('_', ' ').title()
                 context_parts.append(f"\n  {category_display}:")
-                for col, period_type, details in periods[:5]:  # Limit display
+                for col, period_type, details in periods[:50]:  # Limit display
                     context_parts.append(f"    • {col} ({period_type}): {details['notes']}")
-                if len(periods) > 5:
-                    context_parts.append(f"    ... and {len(periods) - 5} more {category_display.lower()} columns")
+                if len(periods) > 50:
+                    context_parts.append(f"    ... and {len(periods) - 50} more {category_display.lower()} columns")
 
         # Section 3: Measure Columns
         if measure_cols:
@@ -1800,14 +1796,14 @@ class DataAnalysisAgent:
 
             context_parts.append("\n   A) Traditional Time Series Analysis:")
             if measure_cols:
-                context_parts.append(f"   traditional_cols = {time_cols[:5]}")  # Show first 5 as example
+                context_parts.append(f"   traditional_cols = {time_cols[:100]}")
                 context_parts.append(
                     f"   traditional_data = current_data.set_index('{measure_cols[0]}')[traditional_cols].T")
                 context_parts.append("   # Good for: trend analysis, seasonality, forecasting")
 
             context_parts.append("\n   B) Business Period Analysis:")
             if business_period_cols and measure_cols:
-                context_parts.append(f"   business_cols = {business_period_cols[:3]}")  # Show first 3 as example
+                context_parts.append(f"   business_cols = {business_period_cols[:10]}")  # Show first 3 as example
                 context_parts.append(f"   business_data = current_data.set_index('{measure_cols[0]}')[business_cols]")
                 context_parts.append("   # Good for: performance tracking, target achievement, growth rates")
 
@@ -1868,10 +1864,10 @@ class DataAnalysisAgent:
             context_parts.append("   # Don't mix traditional time and business periods in same analysis")
 
             context_parts.append("\n   # For trend analysis - use traditional time columns:")
-            context_parts.append(f"   trend_columns = {time_cols[:5] if time_cols else []}")
+            context_parts.append(f"   trend_columns = {time_cols[:100] if time_cols else []}")
 
             context_parts.append("\n   # For performance tracking - use business periods:")
-            context_parts.append(f"   performance_columns = {business_period_cols[:5] if business_period_cols else []}")
+            context_parts.append(f"   performance_columns = {business_period_cols[:10] if business_period_cols else []}")
 
             context_parts.append("\n   # For correlation analysis - standardize first, then choose one type:")
             if measure_cols:
@@ -1884,10 +1880,10 @@ class DataAnalysisAgent:
 
         elif has_business_periods:
             context_parts.append("   # BUSINESS PERIOD DATASETS - Group by period type")
-            cumulative_examples = [col for col in business_period_cols[:3]
+            cumulative_examples = [col for col in business_period_cols[:10]
                                    if col in business_period_details and
                                    'cumulative' in business_period_details[col]['aggregation_type']]
-            rolling_examples = [col for col in business_period_cols[:3]
+            rolling_examples = [col for col in business_period_cols[:10]
                                 if col in business_period_details and
                                 'rolling' in business_period_details[col]['aggregation_type']]
 

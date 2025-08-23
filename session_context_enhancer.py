@@ -505,8 +505,8 @@ def create_result_summary(result: Any, max_length: int = 1000) -> str:
                 if len(keys) > 30:
                     summary += f" ... and {len(keys) - 30} more"
 
-            # Add sample of first 5 rows
-            rows_to_show = min(5, len(result))  # Show up to 5 rows
+            # Add sample of first 20 rows
+            rows_to_show = min(20, len(result))  # Show up to 20 rows
             if rows_to_show > 0:
                 summary += f"\n\nFirst {rows_to_show} rows:"
 
@@ -514,8 +514,8 @@ def create_result_summary(result: Any, max_length: int = 1000) -> str:
                     row = result[row_idx]
                     row_items = []
 
-                    # Show up to 10 key-value pairs per row
-                    items_to_show = min(10, len(keys))
+                    # Show up to 20 key-value pairs per row
+                    items_to_show = min(20, len(keys))
                     for k in keys[:items_to_show]:
                         v = row.get(k, '')
                         # Format value based on type
@@ -567,12 +567,12 @@ def create_result_summary(result: Any, max_length: int = 1000) -> str:
         summary = f"DataFrame with {shape[0]} rows and {shape[1]} columns"
         summary += f"\nColumns: {', '.join(map(str, cols))}"
 
-        # Add first 5 rows of actual data
-        rows_to_show = min(5, len(result))
+        # Add first 20 rows of actual data
+        rows_to_show = min(20, len(result))
         if rows_to_show > 0:
             summary += f"\n\nFirst {rows_to_show} rows:"
 
-            # Convert first 5 rows to dict format for easier processing
+            # Convert first 20 rows to dict format for easier processing
             sample_data = result.head(rows_to_show).to_dict('records')
 
             for idx, row_dict in enumerate(sample_data):
@@ -609,8 +609,8 @@ def create_result_summary(result: Any, max_length: int = 1000) -> str:
     elif pd and isinstance(result, pd.Series):
         summary = f"Series '{result.name}' with {len(result)} values, dtype: {result.dtype}"
 
-        # Show first 20 values with their index
-        sample_size = min(20, len(result))
+        # Show first 100 values with their index
+        sample_size = min(100, len(result))
         if sample_size > 0:
             summary += f"\n\nFirst {sample_size} values:"
 

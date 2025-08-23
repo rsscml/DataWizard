@@ -2721,9 +2721,8 @@ Step 1. Analyze the user's query and data context to determine the most appropri
             e. Statistical complexity (Basic stats, Hypothesis testing, Regression, Classification, Clustering etc.)
             f. Visualization requirements (Executive summary, Operational dashboard, Analytical deep-dive etc.)
 
-Step 2. Use the analysis conducted in step 1 to generate required code. Adapt to available libraries and support multi-worksheet Excel analysis.
-        Use the guidance
-
+Step 2. Use the analysis conducted in step 1 to generate required code.
+   
 Here are some key code generation guides to help you in your task.
 
 {data_prep_patterns}

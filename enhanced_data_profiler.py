@@ -1448,9 +1448,7 @@ def generate_enhanced_data_summary(df: pd.DataFrame) -> Dict[str, Any]:
 def format_enhanced_context_for_llm(enhanced_summary: Dict[str, Any], original_context: str) -> str:
     """Format the enhanced summary into a comprehensive context string for the LLM with improved categorization"""
 
-    context_parts = [original_context, "\n"]
-    context_parts.append("ENHANCED DATA PROFILE")
-    context_parts.append("\n" + "=" * 50)
+    context_parts = [original_context, "\n", "ENHANCED DATA PROFILE:"]
 
     # Analysis status
     analysis_status = enhanced_summary.get('analysis_status', {})

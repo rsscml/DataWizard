@@ -2127,7 +2127,7 @@ Use these exact variable names to access the data in your Python code.
             logger.info(f"Using enhanced context from template: {detected_template.name}{template_type_msg}")
             print(f"Enhanced context applied using template: {detected_template.name}{template_type_msg}")
         else:
-            print("No template detected, using standard context")
+            print("No template detected, using standard context with enhanced data profile")
             # NEW: Add enhanced context if available
             if data_summary.get('enhanced_profiling_available', False):
                 context = format_enhanced_context_for_llm(data_summary, context)
