@@ -1777,8 +1777,8 @@ def format_enhanced_context_for_llm(enhanced_summary: Dict[str, Any], original_c
             f"The following {len(long_text_columns)} columns contain LONG FREE-FORM TEXT and must be COMPLETELY IGNORED:")
         context_parts.append(f"IGNORE THESE: {', '.join(long_text_columns)}")
         context_parts.append("These columns are NOT suitable for:")
-        context_parts.append("• Categorical analysis • Grouping operations • Statistical analysis")
-        context_parts.append("• Value counting • Pattern analysis • Any data manipulation")
+        context_parts.append("- Categorical analysis • Grouping operations • Statistical analysis")
+        context_parts.append("- Value counting • Pattern analysis • Any data manipulation")
         context_parts.append("=" * 50)
 
     return "\n".join(context_parts)
