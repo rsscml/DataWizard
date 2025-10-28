@@ -124,8 +124,8 @@ app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # OnlyOffice Configuration
-ONLYOFFICE_SERVER_URL = os.getenv('ONLYOFFICE_SERVER_URL', 'https://ai-ods-demo.azurewebsites.net')
-ONLYOFFICE_CALLBACK_URL = os.getenv('ONLYOFFICE_CALLBACK_URL', 'http://localhost:5000/onlyoffice/callback')
+ONLYOFFICE_SERVER_URL = os.getenv('ONLYOFFICE_SERVER_URL')
+ONLYOFFICE_CALLBACK_URL = os.getenv('ONLYOFFICE_CALLBACK_URL')
 
 # Ensure directories exist
 for folder in ['UPLOAD_FOLDER', 'DOWNLOAD_FOLDER', 'DOCUMENTS_FOLDER']:
