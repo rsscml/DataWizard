@@ -398,18 +398,18 @@ class EnhancedLogger:
         """Log the start of an operation"""
         if self.config.enable_detailed_logging:
             context_str = f" | Context: {context}" if context else ""
-            self.logger.info(f"🚀 Starting operation: {operation}{context_str}")
+            self.logger.info(f" Starting operation: {operation}{context_str}")
     
     def log_operation_success(self, operation: str, duration: float = None, details: dict = None):
         """Log successful completion of an operation"""
         duration_str = f" | Duration: {duration:.2f}s" if duration else ""
         details_str = f" | Details: {details}" if details and self.config.enable_detailed_logging else ""
-        self.logger.info(f"✅ Completed operation: {operation}{duration_str}{details_str}")
+        self.logger.info(f" Completed operation: {operation}{duration_str}{details_str}")
     
     def log_operation_warning(self, operation: str, warning: str, details: dict = None):
         """Log a warning during an operation"""
         details_str = f" | Details: {details}" if details and self.config.enable_detailed_logging else ""
-        self.logger.warning(f"⚠️ Warning in {operation}: {warning}{details_str}")
+        self.logger.warning(f" Warning in {operation}: {warning}{details_str}")
     
     def log_error(self, error: Exception, operation: str = None, category: ErrorCategory = None):
         """Log an error with full context"""
@@ -425,10 +425,10 @@ class EnhancedLogger:
         operation_str = f" in {operation}" if operation else ""
         details_str = f" | Details: {error_details}" if error_details and self.config.enable_detailed_logging else ""
         
-        self.logger.error(f"❌ {category.value.upper()} ERROR{operation_str}: {str(error)}{details_str}")
+        self.logger.error(f" {category.value.upper()} ERROR{operation_str}: {str(error)}{details_str}")
         
         if original_error and original_error != error and self.config.enable_detailed_logging:
-            self.logger.error(f"📋 Original error: {type(original_error).__name__}: {str(original_error)}")
+            self.logger.error(f" Original error: {type(original_error).__name__}: {str(original_error)}")
     
     def _categorize_error(self, error: Exception) -> ErrorCategory:
         """Automatically categorize errors based on type and message"""
@@ -3116,10 +3116,10 @@ WORKSHEET MERGING:
             return error_msg
             
         elif isinstance(error, ValueError) and "no data available" in error_str:
-            return "❌ No data available for analysis. Please upload a file first before asking questions about your data."
+            return " No data available for analysis. Please upload a file first before asking questions about your data."
             
         elif isinstance(error, AttributeError) and 'str' in error_str and 'attribute' in error_str:
-            error_msg = f"❌ String method error: {str(error)}"
+            error_msg = f" String method error: {str(error)}"
             error_msg += "\n\n Fix: Cast column to string first before using .str() methods:"
             error_msg += "\n Use: df['column'].astype('str').str.method()"
             error_msg += "\n Don't use: df['column'].str.method() directly"
@@ -3130,7 +3130,7 @@ WORKSHEET MERGING:
             return error_msg
             
         elif isinstance(error, NameError):
-            error_msg = f"❌ Library or function not available: {str(error)}"
+            error_msg = f" Library or function not available: {str(error)}"
             
             # Check which library is missing and provide specific guidance
             if 'linearregression' in error_str or 'sklearn' in error_str:
@@ -3153,7 +3153,7 @@ WORKSHEET MERGING:
             return error_msg
             
         elif isinstance(error, ImportError):
-            error_msg = f"❌ Missing library: {str(error)}"
+            error_msg = f" Missing library: {str(error)}"
             error_msg += "\n\n Install missing analytics libraries:"
             error_msg += "\npip install scikit-learn scipy statsmodels matplotlib seaborn"
             error_msg += "\n\n For now, try basic operations like:"
@@ -3166,7 +3166,7 @@ WORKSHEET MERGING:
             if len(message) > self.config.max_error_message_length:
                 message = message[:self.config.max_error_message_length] + "..."
             
-            error_msg = f"❌ Error executing code: {message}"
+            error_msg = f" Error executing code: {message}"
             
             # Add helpful context for common errors
             if "typeerror" in error_str:
