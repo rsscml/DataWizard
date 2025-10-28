@@ -32,7 +32,9 @@
             color: #73706E;
             height: 100vh;
             overflow: hidden;
-            padding: 15px;
+            padding: 0 15px 15px 0;
+            margin: 0;
+            margin-top: -10px;
             border-right: 3px solid #005EEF;
             box-shadow: 2px 0 15px rgba(31, 54, 199, 0.08);
             transition: margin-left 0.3s ease;
@@ -52,15 +54,19 @@
         }
 
         .logo-container {
-            position: fixed;
-            bottom: 5px;
-            right: 25px;
-            z-index: 10002;
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin: 0;
+            margin-top: -10px; /* Negative margin to pull up */
+            margin-left: 5px; /* Negative margin to pull left */
+            padding: 0;
+            flex-shrink: 0;
         }
         
         /* Mode Toggle Button */
         .mode-toggle-container {
-            margin-top: 10px;
+            margin-top: 0;
             margin-bottom: 15px;
         }
 
@@ -1778,10 +1784,6 @@
     </style>
 </head>
 <body>
-    <div class="logo-container">
-        <img src="/static/images/PerfCockpit.svg" style="width: 8em; height: 8em;" alt="Logo">
-    </div>
-    
     <!-- Sidebar Toggle Button -->
     <button class="sidebar-toggle" id="sidebarToggle" title="Show Sidebar">
         <i class="fas fa-chevron-right"></i>
@@ -1792,12 +1794,9 @@
             <!-- Left Sidebar - AI Assistant -->
             <div class="col-md-3 sidebar" id="sidebar">
                 <div style="flex-shrink: 0; margin-bottom: 10px;">
-                    <h3 style="background: linear-gradient(135deg, #1F36C7 0%, #005EEF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: bold; margin-bottom: 5px; font-size: 1.75rem;">
-                        <i class="fas fa-database" style="color: #005EEF;"></i> Data Wizard
-                    </h3>
-                    <p style="color: #73706E; font-size: 0.85rem; margin: 0; opacity: 0.8; font-style: italic;">
-                        AI Powered Structured & Relational Data Analysis
-                    </p>
+                    <div class="logo-container">
+                        <img src="/static/images/PerfCockpit.svg" style="width: 9em; height: 9em;" alt="Logo">
+                    </div>
                     <!-- Mode Toggle Button -->
                     <div class="mode-toggle-container">
                         <button class="mode-toggle-btn" id="fileUploadModeBtn" onclick="switchToFileMode()">

@@ -1,13 +1,12 @@
 """
 Enhanced agent.py with intelligent wide format data handling, mixed measure type analysis, and automated commentary/insights generation
-FEATURES:
 - Automatic detection of wide format time-series data
 - Smart handling of mixed measure types (absolute, percentage, ratio)
 - Data transformation utilities for statistical analysis
 - Enhanced correlation analysis for business metrics
 - Configuration Management for all settings
 - Enhanced Error Handling and Logging
-- NEW: Automated commentary and insights generation for all outputs
+- Automated commentary and insights generation for all outputs
 """
 
 import sys
@@ -22,7 +21,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.utils import PlotlyJSONEncoder
 
-#from llm_factory import create_universal_llm, UniversalLLMFactory, LLMConfig
 try:
     from llm_factory import create_universal_llm, UniversalLLMFactory, LLMConfig, LLMProvider
     UNIVERSAL_LLM_AVAILABLE = True
@@ -45,9 +43,6 @@ from datetime import datetime, timedelta
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-
-# For result formatting
-from result_formatter import format_result_for_user, validate_result_user_friendliness
 
 # Import analytics libraries with error handling
 try:
@@ -185,9 +180,7 @@ from codegen_prompt import get_code_generation_prompt
 from dotenv import load_dotenv
 load_dotenv()
 
-# ===========================
 # CONFIGURATION MANAGEMENT
-# ===========================
 
 @dataclass
 class AgentConfig:
@@ -354,9 +347,7 @@ class AgentConfig:
             commentary_temperature=float(os.getenv('AGENT_COMMENTARY_TEMPERATURE', cls.commentary_temperature))
         )
 
-# ===========================
 # ERROR HANDLING & LOGGING
-# ===========================
 
 class ErrorCategory(Enum):
     """Categorization of errors for better handling and logging"""
@@ -548,9 +539,7 @@ def setup_global_logging(config: AgentConfig):
         format=config.log_format
     )
 
-# ===========================
 # ENHANCED CLASSES WITH CONFIG AND LOGGING
-# ===========================
 
 class DataFormatAnalyzer:
     """Intelligent analyzer for detecting and handling wide format business data"""
@@ -1016,7 +1005,7 @@ class TokenManager:
         self.config = config or AgentConfig()
         self.logger = logger or EnhancedLogger(self.config, "TokenManager")
 
-        # FIXED: retry state tracking
+        # Fixed: retry state tracking
         self.last_refresh_attempt = None
         self.consecutive_failures = 0
         self.max_consecutive_failures = 3
@@ -1317,7 +1306,7 @@ def initialize_token_manager():
     
     return token_manager
 
-# new create_langchain_llm_with_auto_refresh function
+# new: create_langchain_llm_with_auto_refresh function
 def create_langchain_llm_with_auto_refresh(endpoint_path="/openai4/az_openai_gpt-4o_chat"):
     """Create LangChain LLM with automatic token refresh capability
 
@@ -1754,9 +1743,9 @@ class DataAnalysisAgent:
             display_time_cols = time_cols[:100]
             time_cols_suffix = f" ... and {len(time_cols) - 100} more" if len(time_cols) > 100 else ""
             context_parts.append(f"  Examples: {', '.join(display_time_cols)}{time_cols_suffix}")
-            context_parts.append(f"  • Calendar-based periods (quarters, months, years)")
-            context_parts.append(f"  • Sequential time progression")
-            context_parts.append(f"  • Good for: trend analysis, seasonality, forecasting")
+            context_parts.append(f"  - Calendar-based periods (quarters, months, years)")
+            context_parts.append(f"  - Sequential time progression")
+            context_parts.append(f"  - Good for: trend analysis, seasonality, forecasting")
 
         # Section 2: Business Period Columns (if present)
         if has_business_periods and business_period_cols:

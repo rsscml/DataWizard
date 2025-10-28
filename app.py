@@ -85,6 +85,7 @@ from enhanced_data_profiler import format_enhanced_context_for_llm
 
 # Import database specific components - new in v10
 from database_routes import register_database_routes
+
 # ENHANCED: Import the new supplemental context routes
 from supplemental_context_routes import register_supplemental_context_routes
 from database_config import get_config_manager
